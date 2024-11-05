@@ -1,0 +1,38 @@
+@tailwind base;
+*::-webkit-scrollbar-track {
+    background: var(--primary);
+    border-radius: 5px;
+  }
+  
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--secondary);
+    border-radius: 14px;
+    border: 3px solid var(--primary);
+  }
+
+@layer components {
+  .hero {
+    @apply bg-white !important; /* Đặt màu nền trắng với mức độ ưu tiên cao */
+  }
+
+  .chatbot-hero-content {
+    @apply max-w-[55%] flex-1 ml-20 mt-10; /* 5 đơn vị = khoảng 20px */
+  }
+
+  .chatbot-hero-robot {
+    @apply flex flex-col justify-start items-start max-w-[40%] flex-1;
+  }
+
+  .chatbot-hero-content h1 {
+    @apply text-5xl font-bold mb-6; /* text-5xl sẽ tăng kích thước chữ, font-bold để in đậm */
+  }
+
+  .get-started-btn {
+    @apply px-6 py-2  mt-4; /* Điều chỉnh padding để làm nhỏ nút */
+    font-size: 18px; /* Giảm kích thước chữ để cân bằng với nút */
+  }
+}
+
+
+@tailwind components;
+@tailwind utilities;
