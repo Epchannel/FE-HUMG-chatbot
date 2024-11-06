@@ -28,9 +28,10 @@
   }
 
   .get-started-btn {
-    @apply px-6 py-2  mt-4; /* Điều chỉnh padding để làm nhỏ nút */
-    font-size: 18px; /* Giảm kích thước chữ để cân bằng với nút */
+    @apply px-8 py-4 mt-2; /* Tăng padding ngang (px) và padding dọc (py) */
+    font-size: 20px; /* Điều chỉnh font-size nếu cần */
   }
+  
 }
 
 

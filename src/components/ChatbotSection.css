@@ -1,102 +1,92 @@
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  }
-  
-  body {
-    background-color: #ccfbf1;
-    color: #394e63;
-  }
-  
-  .hero {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    padding: 50px 80px;
-    height: auto;
-    flex-wrap: wrap;
-    background-color: white !important; /* Đặt màu nền trắng và đảm bảo ghi đè với !important */
-  }
-  
-  
-  .hero-content {
-    max-width: 55%; /* Điều chỉnh cho phù hợp với kích thước phần tử ảnh */
-    flex: 1;
-  }
-  
-  .hero-content h1 {
-    font-size: 45px;
-    font-weight: bold;
-    margin-bottom: 30px;
-    line-height: 1.1;
-  }
-  
-  .hero-content p {
-    font-size: 19px;
-    font-weight: bold;
-    margin-bottom: 40px;
-  }
-  
-  .get-started-btn {
-    display: inline-block;
-    padding: 20px 40px;
-    background-color: white;
-    color: #0066FF;
-    font-weight: bold;
-    border-radius: 25px;
-    text-decoration: none;
-    margin-bottom: 50px;
-    font-size: 20px;
-  }
-  
-  .hero-robot {
-    max-width: 40%; /* Đảm bảo rằng chiều rộng không vượt quá 40% */
-    display: flex;
-    justify-content: flex-start;
-    align-items: flex-start;
-    flex-direction: column;
-  }
-  
-  .robot-image {
-    width: 100%; /* Đảm bảo hình ảnh mở rộng toàn bộ chiều rộng của phần chứa */
-    max-width: 450px; /* Giữ nguyên giá trị gốc nếu không cần thiết phải mở rộng */
-    animation: bobbing 3s ease-in-out infinite;
-    margin-top: -20px;
-  }
-  
-  .chatbot-hero {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: flex-start !important;
-  }
-  
-  
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
 
-  @keyframes bobbing {
-    0%, 100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
+.chatbot-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-image: url("https://www.xtremeonline.in/wp-content/uploads/2024/08/wve-bg.png");
+  background-size: contain; /* Hiển thị toàn bộ ảnh trong section mà không bị cắt */
+  background-repeat: no-repeat; /* Ngăn ảnh nền lặp lại */
+  background-position: center bottom; /* Căn ảnh ở giữa và sát đáy */
+  padding: 50px 80px;
+  flex-wrap: wrap;
+}
+
+
+
+
+.chatbot-hero-content {
+  max-width: 55%;
+  flex: 1;
+}
+
+.chatbot-hero-content h1 {
+  font-size: 45px;
+  font-weight: bold;
+  margin-bottom: 30px;
+  line-height: 1.1;
+}
+
+.chatbot-hero-content p {
+  font-size: 19px;
+  font-weight: bold;
+  margin-bottom: 40px;
+}
+
+.get-started-btn {
+  display: inline-block;
+  background-color: #2E87C5;
+  color: white;
+  font-weight: bold;
+  border-radius: 25px;
+  text-decoration: none;
+  margin-bottom: 50px;
+  font-size: 20px;
+}
+
+
+.chatbot-hero-robot {
+  max-width: 40%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  flex-direction: column;
+}
+
+.robot-image {
+  width: 100%;
+  max-width: 450px;
+  animation: bobbing 3s ease-in-out infinite;
+  margin-top: -20px;
+}
+
+@keyframes bobbing {
+  0%, 100% {
+    transform: translateY(0);
   }
-  
-  .elementor-widget-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 8px 15px;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 24px 24px 0 24px;
-    margin-bottom: 0;
+  50% {
+    transform: translateY(-10px);
   }
-  
-  .elementor-heading-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #394e63;
-    opacity: 0.7;
-  }
-  
+}
+
+.elementor-widget-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 15px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 24px 24px 0 24px;
+  margin-bottom: 0;
+}
+
+.elementor-heading-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #394e63;
+  opacity: 0.7;
+}

@@ -1,12 +1,10 @@
 import React from "react";
 import "./ChatbotSection.css";
+import chatbotHeroImage from "../assets/Chatbot-Hero-Image.png";
 
 const ChatbotSection = () => {
   return (
-    <section
-      className="chatbot-hero"
-      style={{ background: 'linear-gradient(135deg, #ffffff, #ccfbf1)' }}
-    >
+    <section className="chatbot-hero">
       <div className="chatbot-hero-content">
         <h1>
           Chatbot hỗ trợ tư vấn tuyển sinh <br /> Trường Đại học Mỏ - Địa chất.
@@ -28,10 +26,11 @@ const ChatbotSection = () => {
           </h4>
         </div>
         <img
-          src="https://kitpapa.net/zenbot/wp-content/uploads/2024/03/Chatbot-Hero-Image.webp"
+          src={chatbotHeroImage}
           alt="Chatbot"
           className="robot-image"
         />
+
       </div>
     </section>
   );

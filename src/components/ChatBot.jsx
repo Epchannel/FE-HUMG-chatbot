@@ -38,15 +38,28 @@ function ChatBot(props) {
       ],
     ],
   ]);
+  // Hàm cuộn xuống cuối khung chat
+  function scrollToEnd(smooth = true) {
+    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
+  }
+
+  // Cuộn khi `dataChat` hoặc `isLoading` thay đổi
   useEffect(() => {
-    ScrollToEndChat();
-  }, [isLoading]);
+    scrollToEnd();
+  }, [dataChat, isLoading]);
+
+  // Giữ thanh cuộn mượt trong quá trình `TypeAnimation` tạo nội dung
   useEffect(() => {
-    const interval = setInterval(() => {
-      SetTimeOfRequest((timeOfRequest) => timeOfRequest + 1);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    if (isGen) {
+      const smoothScroll = () => {
+        scrollToEnd();
+        if (isGen) {
+          setTimeout(smoothScroll, 300); // Tăng thời gian nếu cần mượt hơn
+        }
+      };
+      smoothScroll();
+    }
+  }, [isGen]);
 
   function ScrollToEndChat() {
     messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -57,39 +70,39 @@ function ChatBot(props) {
 
   async function SendMessageChat() {
     if (promptInput !== "" && isLoading === false) {
-      SetTimeOfRequest(0);
-      SetIsGen(true);
-      SetPromptInput("");
-      SetIsLoad(true);
-      SetDataChat((prev) => [...prev, ["end", [promptInput]]]);
-      SetChatHistory((prev) => [promptInput, ...prev]);
-  
-      fetch("https://lark-discrete-slug.ngrok-free.app/ask/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "69420",
-        },
-        body: JSON.stringify({ question: promptInput }),
-      })
-        .then((response) => response.json())
-        .then((result) => {
-          SetDataChat((prev) => [
-            ...prev,
-            ["start", [result.answer, result.source_documents]],
-          ]);
-          SetIsLoad(false);
+        SetTimeOfRequest(0);
+        SetIsGen(true);
+        SetPromptInput("");
+        SetIsLoad(true);
+        SetDataChat((prev) => [...prev, ["end", [promptInput]]]);
+        SetChatHistory((prev) => [promptInput, ...prev]);
+
+        fetch("https://lark-discrete-slug.ngrok-free.app/ask/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "ngrok-skip-browser-warning": "69420",
+            },
+            body: JSON.stringify({ question: promptInput }),
         })
-        .catch((error) => {
-          SetDataChat((prev) => [
-            ...prev,
-            ["start", ["Lỗi, không thể kết nối với server", null]],
-          ]);
-          SetIsLoad(false);
-        });
-      
+            .then((response) => response.json())
+            .then((result) => {
+                SetDataChat((prev) => [
+                    ...prev,
+                    ["start", [result.answer, result.source_documents]], // Thêm source_documents vào response
+                ]);
+                SetIsLoad(false);
+            })
+            .catch((error) => {
+                SetDataChat((prev) => [
+                    ...prev,
+                    ["start", ["Lỗi, không thể kết nối với server", null]], // Xử lý lỗi kết nối
+                ]);
+                SetIsLoad(false);
+            });
     }
-  }
+}
+
   
 
   const handleKeyDown = (event) => {
@@ -246,83 +259,55 @@ function ChatBot(props) {
           rounded-3xl border-2 md:w-[50%] md:p-3 p-1  w-full overflow-auto scroll-y-auto h-[80%] "
         >
           {dataChat.map((dataMessages, i) =>
-            dataMessages[0] === "start" ? (
-              <div className="chat chat-start drop-shadow-md" key={i}>
-                <div className="chat-image avatar">
-                  <div className="w-10 rounded-full border-2 border-blue-500">
-                    <img className="scale-150" src={robot_img} />
+              dataMessages[0] === "start" ? (
+                  <div className="chat chat-start drop-shadow-md" key={`start-${i}`}>
+                      <div className="chat-image avatar">
+                          <div className="w-10 rounded-full border-2 border-blue-500">
+                              <img className="scale-150" src={robot_img} />
+                          </div>
+                      </div>
+                      <div className="chat-bubble chat-bubble-info colo break-words">
+                          <TypeAnimation
+                              style={{ whiteSpace: "pre-line" }}
+                              sequence={[dataMessages[1][0], () => SetIsGen(false)]}
+                              cursor={false}
+                              speed={80}
+                          />
+                          {dataMessages[1][1] && dataMessages[1][1].length > 0 && (
+                              <>
+                                  <div className="divider m-0"></div>
+                                  <p className="font-semibold text-xs">
+                                      Tham khảo:{" "}
+                                      {dataMessages[1][1].map((source, j) => (
+                                          <label
+                                              htmlFor="my_modal_6"
+                                              className="kbd kbd-xs mr-1 hover:bg-sky-300 cursor-pointer"
+                                              onClick={() =>
+                                                  handleReferenceClick(source, dataMessages[1][2])
+                                              }
+                                              key={`source-${j}`}
+                                          >
+                                              {dataMessages[1][2] === "wiki"
+                                                  ? source.metadata.title
+                                                  : source.metadata.page === undefined
+                                                  ? "Sổ tay sinh viên 2023"
+                                                  : "Trang " + source.metadata.page + " (sổ tay SV)"}
+                                          </label>
+                                      ))}
+                                  </p>
+                              </>
+                          )}
+                      </div>
                   </div>
-                </div>
-                <div className="chat-bubble chat-bubble-info colo break-words ">
-                  <TypeAnimation
-                    style={{ whiteSpace: 'pre-line' }} 
-                    sequence={[
-                      // () => ScrollToEndChat(),
-                      dataMessages[1][0]
-                      
-                      ,
-                      () => SetIsGen(false),
-                      // SetIsLoad(false),
-                      // .replace("\n\n", "")
-                      // .split("\n")
-                      // .map((item, key) => {
-                      //   return (
-                      //     <>
-                      //       {item.replace(/ /g, "\u00A0")}
-                      //       <br />
-                      //     </>
-                      //   );
-                      // })
-                    ]}
-                    cursor={false}
-                    // wrapper="span"
-                    speed={100}
-                  />
-                  {dataMessages[1][1] === null ||
-                  dataMessages[1][1].length == 0 ? (
-                    ""
-                  ) : (
-                    <>
-                      <div className="divider m-0"></div>
-                      <p className="font-semibold text-xs">
-                        Tham khảo:{" "}
-                        {dataMessages[1][1].map((source, j) => (
-                          <label
-                            htmlFor="my_modal_6"
-                            className="kbd kbd-xs mr-1 hover:bg-sky-300 cursor-pointer"
-                            onClick={() =>
-                              handleReferenceClick(source, dataMessages[1][2])
-                            }
-                            key={j}
-                          >
-                            {dataMessages[1][2] == "wiki"
-                              ? source.metadata.title
-                              : source.metadata.page==undefined? "Sổ tay sinh viên 2023" : "Trang " +
-                                source.metadata.page +
-                                " (sổ tay SV)"}
-                          </label>
-                        ))}
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="chat chat-end">
-                {/* bg-gradient-to-r from-cyan-500 to-blue-500 */}
-                <div className="chat-bubble shadow-xl chat-bubble-primary bg-gradient-to-r from-purple-500 to-blue-500 text-white">
-                  {dataMessages[1][0]}
-                  <>
-                    <div className="divider m-0"></div>
-                    <p className="font-light text-xs text-cyan-50">
-                      Tham khảo:{" "}
-                      {dataMessages[1][1] == "wiki" ? "Wikipedia" : "NTTU"}
-                    </p>
-                  </>
-                </div>
-              </div>
-            )
+              ) : (
+                  <div className="chat chat-end" key={`end-${i}`}>
+                      <div className="chat-bubble shadow-xl chat-bubble-primary bg-gradient-to-r from-purple-500 to-blue-500 text-white">
+                          {dataMessages[1][0]}
+                      </div>
+                  </div>
+              )
           )}
+
           {isLoading ? (
             <div className="chat chat-start">
               <div className="chat-image avatar">
