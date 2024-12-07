@@ -10,14 +10,13 @@
   justify-content: space-between;
   align-items: flex-start;
   background-image: url("https://www.xtremeonline.in/wp-content/uploads/2024/08/wve-bg.png");
-  background-size: contain; /* Hiển thị toàn bộ ảnh trong section mà không bị cắt */
-  background-repeat: no-repeat; /* Ngăn ảnh nền lặp lại */
-  background-position: center bottom; /* Căn ảnh ở giữa và sát đáy */
-  padding: 50px 80px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center 120%; /* Đẩy ảnh nền xuống thấp hơn */
+  padding: 5px 80px;
+  padding-bottom: 100px; /* Thêm khoảng cách dưới */
   flex-wrap: wrap;
 }
-
-
 
 
 .chatbot-hero-content {
@@ -28,25 +27,75 @@
 .chatbot-hero-content h1 {
   font-size: 45px;
   font-weight: bold;
-  margin-bottom: 30px;
-  line-height: 1.1;
+  /* margin-bottom: 30px;
+  line-height: 1.1; */
 }
+
+.text-humgo-color {
+  color: #2E87C5 !important; /* Thay mã màu này bằng mã màu bạn muốn */
+}
+
+
+.typing-text {
+  font-size: 40px;
+  font-weight: bold;
+  min-width: 280px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+}
+
+.typing-text span {
+  position: relative;
+}
+
+.typing-text #typed-text::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background-color: #2E87C5;
+  margin-left: 2px;
+  animation: blink 0.7s steps(1) infinite;
+}
+
+@keyframes blink {
+  0%, 50% {
+      opacity: 1;
+  }
+  51%, 100% {
+      opacity: 0;
+  }
+}
+
+.typed-text {
+  color: #2E87C5;
+  padding-left: 8px; /* Điều chỉnh giá trị này để có khoảng cách mong muốn */
+}
+
+
 
 .chatbot-hero-content p {
-  font-size: 19px;
-  font-weight: bold;
-  margin-bottom: 40px;
+  font-size: 17px;
+  /* font-weight: bold; */
+  margin-bottom: 20px;
 }
 
-.get-started-btn {
+
+.elementor-widget-container {
   display: inline-block;
-  background-color: #2E87C5;
-  color: white;
-  font-weight: bold;
-  border-radius: 25px;
-  text-decoration: none;
-  margin-bottom: 50px;
-  font-size: 20px;
+  padding: 10px 20px;
+  background-color: #e7f0fe;
+  color: #394e6a;
+  border-radius: 20px 20px 20px 0;
+  animation: shake 0.8s ease-in-out 1s infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  50% { transform: translateX(3px); }
+  75% { transform: translateX(-3px); }
 }
 
 
@@ -78,8 +127,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 8px 15px;
-  background-color: rgba(255, 255, 255, 0.2);
+  padding: 12px 15px;
+  background-color: #e7f0fe;
   border-radius: 24px 24px 0 24px;
   margin-bottom: 0;
 }
@@ -87,6 +136,7 @@
 .elementor-heading-title {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #394e63;
+  color: #013a72cb;
   opacity: 0.7;
 }
+

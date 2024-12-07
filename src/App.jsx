@@ -1,20 +1,18 @@
-// 2.50.0
 import { useEffect, useState } from "react";
 import NavBar from "./components/NavBar";
 import HomePage from "./pages/HomePage";
 import ChatBot from "./components/ChatBot";
-import FAQPage from "./pages/FAQPage"
+import FAQPage from "./pages/FAQPage";
 import IssuePage from "./pages/IssuePage";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-// import ImgGen from "./components/ImgGen";
+import { HashRouter, Routes, Route } from "react-router-dom"; // Thay đổi từ BrowserRouter thành HashRouter
 import ScaleLoader from "react-spinners/ScaleLoader";
-// import { decode as atob, encode as btoa } from "js-base64";
-// import { themeChange } from 'theme-change'
+
 function App() {
   useEffect(() => {}, []);
   const [currentPage, SetCurrentPage] = useState("Home");
+
   return (
-    <BrowserRouter>
+    <HashRouter> {/* Thay đổi từ BrowserRouter thành HashRouter */}
       <div className="overflow-hidden">
         <NavBar />
         <Routes>
@@ -24,7 +22,7 @@ function App() {
           <Route path="faq" element={<FAQPage />} />
         </Routes>
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 

@@ -24,14 +24,16 @@
   }
 
   .chatbot-hero-content h1 {
-    @apply text-5xl font-bold mb-6; /* text-5xl sẽ tăng kích thước chữ, font-bold để in đậm */
-  }
+    @apply text-5xl mb-2 leading-tight; /* `leading-tight` điều chỉnh giãn dòng */
+}
+
 
   .get-started-btn {
     @apply px-8 py-4 mt-2; /* Tăng padding ngang (px) và padding dọc (py) */
     font-size: 20px; /* Điều chỉnh font-size nếu cần */
   }
   
+
 }
 
 
