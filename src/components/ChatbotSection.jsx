@@ -55,7 +55,7 @@ const ChatbotSection = () => {
         <p className="text-justify mb-8">
           Chán ngấy chờ đợi và hỏi mỏi miệng? Có ngay Chatbot AI "chill phết" của HUMG, túc trực 24/7 để giải đáp mọi thắc mắc về Trường Mỏ - Địa chất. Tư vấn tuyển sinh chưa bao giờ dễ thương và tiện lợi đến thế!
         </p>
-        <a href="/FE-HUMG-chatbot/#/chat" className="w-fit mx-auto mt-8 bg-transparent text-[#394e6a] font-bold border-2 border-[#2E87C5] rounded-full text-center py-3 px-6 hover:bg-[#2E87C5] hover:text-white hover:shadow-lg hover:shadow-[#2E87C5]/50 transition-all">
+        <a href="/#/chat" className="w-fit mx-auto mt-8 bg-transparent text-[#394e6a] font-bold border-2 border-[#2E87C5] rounded-full text-center py-3 px-6 hover:bg-[#2E87C5] hover:text-white hover:shadow-lg hover:shadow-[#2E87C5]/50 transition-all">
           Trải nghiệm ngay
         </a>
 
