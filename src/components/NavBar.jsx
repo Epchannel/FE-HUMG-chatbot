@@ -46,7 +46,11 @@ function NavBar() {
           onClick={() => navigate("/")} 
           className="btn btn-ghost normal-case font-extrabold text-xl bg-[linear-gradient(90deg,hsl(var(--s))_0%,hsl(var(--sf))_9%,hsl(var(--pf))_42%,hsl(var(--p))_47%,hsl(var(--a))_100%)] bg-clip-text will-change-auto [-webkit-text-fill-color:transparent] [transform:translate3d(0,0,0)] motion-reduce:!tracking-normal max-[1280px]:!tracking-normal [@supports(color:oklch(0_0_0))]:bg-[linear-gradient(90deg,hsl(var(--s))_4%,color-mix(in_oklch,hsl(var(--sf)),hsl(var(--pf)))_22%,hsl(var(--p))_45%,color-mix(in_oklch,hsl(var(--p)),hsl(var(--a)))_67%,hsl(var(--a))_100.2%)]"
         >
-          HUMG Chatbot
+            <img
+              src="/logo-300x120.png"  // Đường dẫn tới logo trong thư mục public
+              alt="Logo"
+              className="h-12 w-auto" // Bạn có thể điều chỉnh kích thước logo ở đây
+            />
         </a>
       </div>
       <div className="navbar-center hidden lg:flex">

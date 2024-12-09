@@ -1,5 +1,5 @@
 // import avatar from "../assets/avatar.jpg";
-import robot_img from "../assets/robot_image.png";
+import robot_img from "../assets/robot_image.webp";
 import { useState, useRef, useEffect } from "react";
 import ScaleLoader from "react-spinners/ScaleLoader";
 import { TypeAnimation } from "react-type-animation";

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import chatbotHeroImage from "../assets/Chatbot-Hero-Image.png";
+import chatbotHeroImage from "../assets/Chatbot-Hero-Image.webp";
 
 const ChatbotSection = () => {
   useEffect(() => {

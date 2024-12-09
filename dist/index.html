@@ -4,13 +4,133 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/ic.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chatbot HUMG</title>
     <!-- Đảm bảo các đường dẫn đúng với cấu hình base -->
     
     
-    
-    <script type="module" crossorigin src="/FE-HUMG-chatbot/assets/index-41174beb.js"></script>
-    <link rel="stylesheet" href="/FE-HUMG-chatbot/assets/index-4e96a724.css">
+    <title>Trang chủ | Chatbot HUMG</title>
+    <meta property="og:locale" content="vi_VN" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Chatbot HUMG - Chuyên gia Tư vấn tuyển sinh tại Trường Đại học Mỏ - Địa chất" />
+    <meta property="og:description" content="Chatbot HUMG - Chuyên gia Tư vấn tuyển sinh tại Trường Đại học Mỏ - Địa chất" />
+    <meta property="og:url" content="https://chatbothumg.com" />
+    <meta property="og:site_name" content="Chatbot HUMG" />
+    <meta property="og:updated_time" content="2024-06-16T08:26:46+07:00" />
+    <meta property="og:image" content="https://raw.githubusercontent.com/Epchannel/FE-HUMG-chatbot/refs/heads/gh-pages/thumbnail.webp" />
+    <meta property="og:image:secure_url" content="https://raw.githubusercontent.com/Epchannel/FE-HUMG-chatbot/refs/heads/gh-pages/thumbnail.webp" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="600" />
+    <meta property="og:image:alt" content="Chatbot HUMG" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="article:published_time" content="2022-04-15T07:55:53+07:00" />
+    <meta property="article:modified_time" content="2024-06-16T08:26:46+07:00" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Chatbot HUMG - Chuyên gia Tư vấn tuyển sinh tại Trường Đại học Mỏ - Địa chất" />
+    <meta name="twitter:description" content="Chatbot HUMG - Chuyên gia Tư vấn tuyển sinh tại Trường Đại học Mỏ - Địa chất" />
+    <meta name="twitter:image" content="https://raw.githubusercontent.com/Epchannel/FE-HUMG-chatbot/refs/heads/gh-pages/thumbnail.webp" />
+    <meta name="twitter:label1" content="Written by" />
+    <meta name="twitter:data1" content="admin" />
+    <meta name="twitter:label2" content="Time to read" />
+    <meta name="twitter:data2" content="6 minutes" />
+
+    <link rel="icon" href="data:image/png;base64,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" sizes="32x32" />
+    <link rel="icon" href="/assets/logo-120x120-3b8f6467.png" sizes="120x120" />
+    <link rel="apple-touch-icon" href="/assets/logo-100x100-da48c712.png" />
+    <meta name="msapplication-TileImage" content="/public/logo-300x120.png" />
+
+    <script type="application/ld+json" class="rank-math-schema-pro">
+      {
+          "@context": "https://schema.org",
+          "@graph": [{
+              "@type": ["Person", "Organization"],
+              "@id": "https://chatbothumg.com/#person",
+              "name": "Chatbot HUMG - Chuy\u00ean gia Tư v\u00e2n tuy\u1ebfn sinh t\u00e0i Tr\u01b0\u1eddng \u0110\u1ea1i h\u1ecdc M\u1ed9 - \u0110\u1ecba ch\u1ea5t"
+          }, {
+              "@type": "WebSite",
+              "@id": "https://chatbothumg.com/#website",
+              "url": "https://chatbothumg.com",
+              "name": "Chatbot HUMG - Chuy\u00ean gia Tư v\u00e2n tuy\u1ebfn sinh t\u00e0i Tr\u01b0\u1eddng \u0110\u1ea1i h\u1ecdc M\u1ed9 - \u0110\u1ecba ch\u1ea5t",
+              "publisher": {
+                  "@id": "https://chatbothumg.com/#person"
+              },
+              "inLanguage": "vi",
+              "potentialAction": {
+                  "@type": "SearchAction",
+                  "target": "https://chatbothumg.com/?s={search_term_string}",
+                  "query-input": "required name=search_term_string"
+              }
+          }, {
+              "@type": "ImageObject",
+              "@id": "https://raw.githubusercontent.com/Epchannel/FE-HUMG-chatbot/refs/heads/gh-pages/thumbnail.webp",
+              "url": "https://raw.githubusercontent.com/Epchannel/FE-HUMG-chatbot/refs/heads/gh-pages/thumbnail.webp",
+              "width": "1200",
+              "height": "600",
+              "inLanguage": "vi"
+          }, {
+              "@type": "WebPage",
+              "@id": "https://chatbothumg.com/#webpage",
+              "url": "https://chatbothumg.com/",
+              "name": "Chatbot HUMG - Chuy\u00ean gia Tư v\u00e2n tuy\u1ebfn sinh t\u00e0i Tr\u01b0\u1eddng \u0110\u1ea1i h\u1ecdc M\u1ed9 - \u0110\u1ecba ch\u1ea5t",
+              "datePublished": "2022-04-15T07:55:53+07:00",
+              "dateModified": "2024-06-16T08:26:46+07:00",
+              "about": {
+                  "@id": "https://chatbothumg.com/#person"
+              },
+              "isPartOf": {
+                  "@id": "https://chatbothumg.com/#website"
+              },
+              "primaryImageOfPage": {
+                  "@id": "wp-content/uploads/2024/03/thumb-01.png"
+              },
+              "inLanguage": "vi"
+          }, {
+              "@type": "Person",
+              "@id": "https://chatbothumg.com/author/admin/",
+              "name": "admin",
+              "url": "https://chatbothumg.com/author/admin/",
+              "image": {
+                  "@type": "ImageObject",
+                  "@id": "https://gravatar.com/avatar/ba1944354f3a6992dd5f1abe629593e3?s=96&amp;d=mm&amp;r=g",
+                  "url": "https://gravatar.com/avatar/ba1944354f3a6992dd5f1abe629593e3?s=96&amp;d=mm&amp;r=g",
+                  "caption": "admin",
+                  "inLanguage": "vi"
+              }
+          }, {
+              "@type": "Article",
+              "headline": "Chatbot HUMG - Chuy\u00ean gia Tư v\u00e2n tuy\u1ebfn sinh t\u00e0i Tr\u01b0\u1eddng \u0110\u1ea1i h\u1ecdc M\u1ed9 - \u0110\u1ecba ch\u1ea5t",
+              "keywords": "Chatbot HUMG",
+              "datePublished": "2022-04-15T07:55:53+07:00",
+              "dateModified": "2024-06-16T08:26:46+07:00",
+              "author": {
+                  "@id": "https://chatbothumg.com/author/admin/",
+                  "name": "admin"
+              },
+              "publisher": {
+                  "@id": "https://chatbothumg.com/#person"
+              },
+              "description": "Chatbot HUMG - Chuy\u00ean gia Tư v\u00e2n tuy\u1ebfn sinh t\u00e0i Tr\u01b0\u1eddng \u0110\u1ea1i h\u1ecdc M\u1ed9 - \u0110\u1ecba ch\u1ea5t",
+              "name": "Chatbot HUMG - Chuy\u00ean gia Tư v\u00e2n tuy\u1ebfn sinh t\u00e0i Tr\u01b0\u1eddng \u0110\u1ea1i h\u1ecdc M\u1ed9 - \u0110\u1ecba ch\u1ea5t",
+              "@id": "https://chatbothumg.com/#richSnippet",
+              "isPartOf": {
+                  "@id": "https://chatbothumg.com/#webpage"
+              },
+              "image": {
+                  "@id": "wp-content/uploads/2024/03/thumb-01.png"
+              },
+              "inLanguage": "vi",
+              "mainEntityOfPage": {
+                  "@id": "https://chatbothumg.com/#webpage"
+              }
+          }]
+      }
+  </script>
+  <link rel='dns-prefetch' href='//cdn.jsdelivr.net' />
+  <link rel='dns-prefetch' href='//use.fontawesome.com' />
+  <link rel='dns-prefetch' href='//fonts.googleapis.com' />
+  <link rel="alternate" type="application/rss+xml" title="Chatbot HUMG - Chuyên gia Tư vấn tuyển sinh tại Trường Đại học Mỏ - Địa chất &raquo;" href="https://chatbothumg.com/feed/" />
+  <link rel="alternate" type="application/rss+xml" title="Chatbot HUMG &raquo; Dòng bình luận" href="https://chatbothumg.com/comments/feed/" />
+
+    <script type="module" crossorigin src="/assets/index-7fae9752.js"></script>
+    <link rel="stylesheet" href="/assets/index-41b78315.css">
   </head>
   <body>
     <div id="root"></div>
