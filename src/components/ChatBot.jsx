@@ -14,19 +14,12 @@ function ChatBot(props) {
 
   
   const commonQuestions=[
-    "Điều kiện nhận học bổng?",
-    "Bao nhiêu điểm thì học lực Xuất sắc?",
-    "Bao nhiêu điểm thì học lực Giỏi?",
-    "Bao nhiêu điểm thì học lực Khá?",
-    "Điều kiện thực tập tốt nghiệp là gì?",
-    "Học phần đã đăng ký có trạng thái N* là gì?",
-    "Điều kiện nào để được xét chuyển trường?",
-    "Lệ phí cấp bảng điểm là bao nhiêu?",
-    "Nếu điểm thi kết thúc học phần < 4 thì như thế nào?",
-    "Phí cấp lại thẻ sinh viên khi bị mất là bao nhiêu?",
-    "Để đạt loại tốt điểm rèn luyện cần bao nhiêu điểm?",
-    "Nếu sinh viên không đạt ở một học phần, phải làm gì?",
-  ]
+    "Tín chỉ là gì?",
+    "Giới thiệu về cơ sở vật chất của trường?",
+    "Khoa Công nghệ Thông tin có các ngành chính nào?",
+    "Trường có ký túc xá không?",
+    "Học phần tiên quyết là như thế nào?",
+]
   let [isLoading, SetIsLoad] = useState(false);
   let [isGen, SetIsGen] = useState(false);
   const [dataChat, SetDataChat] = useState([
