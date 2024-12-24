@@ -89,7 +89,7 @@ function ChatBot(props) {
             .catch((error) => {
                 SetDataChat((prev) => [
                     ...prev,
-                    ["start", ["Lỗi, không thể kết nối với server", null]], // Xử lý lỗi kết nối
+                    ["start", ["Lỗi, không thể kết nối với server. Hãy liên hệ theo hotline", null]], // Xử lý lỗi kết nối
                 ]);
                 SetIsLoad(false);
             });
