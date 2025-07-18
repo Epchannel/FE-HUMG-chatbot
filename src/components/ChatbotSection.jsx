@@ -33,12 +33,12 @@ const ChatbotSection = () => {
 
   return (
     <section
-      className="flex flex-col md:flex-row justify-between items-center md:items-start p-5 md:px-10 md:py-5 min-h-[600px] pb-28"
+      className="flex flex-col md:flex-row justify-between items-center md:items-start p-5 md:px-10 md:py-5 min-h-[3200px] pb-32"
       style={{
         backgroundImage: "url('https://www.xtremeonline.in/wp-content/uploads/2024/08/wve-bg.png')",
-        backgroundSize: 'contain',
+        backgroundSize: '100%', /* Tăng kích thước để mô phỏng hiệu ứng zoom toàn bộ website */
         backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'center bottom',
+        backgroundPosition: 'center 20%', /* Đẩy ảnh nền xuống thấp hơn */
       }}
     >
       {/* Thêm padding trái cho phần bao bọc để tạo cảm giác căn giữa */}

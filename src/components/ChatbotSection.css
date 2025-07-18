@@ -10,11 +10,11 @@
   justify-content: space-between;
   align-items: flex-start;
   background-image: url("https://www.xtremeonline.in/wp-content/uploads/2024/08/wve-bg.png");
-  background-size: contain;
+  background-size: 100%; /* Phóng to ảnh nền lên 150% */
   background-repeat: no-repeat;
-  background-position: center 120%; /* Đẩy ảnh nền xuống thấp hơn */
+  background-position: center 50%; /* Đẩy ảnh nền xuống thấp hơn */
   padding: 5px 80px;
-  padding-bottom: 100px; /* Thêm khoảng cách dưới */
+  padding-bottom: 0px; /* Thêm khoảng cách dưới */
   flex-wrap: wrap;
 }
 
