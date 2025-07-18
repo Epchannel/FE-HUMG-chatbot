@@ -103,6 +103,8 @@ const getStoredChatData = () => {
 // New API endpoints
 const API_BASE_URL = "http://34.87.17.241:9999";
 const CHATBOT_ENDPOINT = `${API_BASE_URL}/chatbot_proactive`;
+const GET_CONV_TITLE_ENDPOINT = `${API_BASE_URL}/get_conv_title`;
+const GET_CHAT_CONV_ENDPOINT = `${API_BASE_URL}/get_chat_conv`;
 
 // Utility function to generate session ID
 const generateSessionId = () => {
@@ -129,6 +131,11 @@ function ChatBot(props) {
     userName: '',
     nameBot: 'DieuLinh'
   });
+  
+  // New state for conversation history from API
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(false);
+  const [isLoadingChatHistory, setIsLoadingChatHistory] = useState(false);
   
   const commonQuestions=[
     "Điểm chuẩn của ngành Quản trị Kinh doanh năm 2024 theo điểm thi THPT",
@@ -261,13 +268,22 @@ function ChatBot(props) {
     }
   };
 
-  // Hàm xóa lịch sử chat
+  // Hàm xóa lịch sử chat hiện tại
   const clearChatHistory = () => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử chat?')) {
+    if (window.confirm('Bạn có chắc chắn muốn xóa cuộc trò chuyện hiện tại và bắt đầu cuộc trò chuyện mới?')) {
+      // Start a new session
+      const newSessionId = generateSessionId();
+      setSessionId(newSessionId);
+      
+      // Update URL with new session ID
+      updateUrlWithSessionId(newSessionId);
+      
+      // Clear current chat data
       SetDataChat([["start", ["Xin chào! Đây là HUMG Chatbot, trợ lý đắc lực dành cho bạn! Bạn muốn tìm kiếm thông tin về những gì? 😄", null]]]);
       SetChatHistory([]);
       setFeedbackState({});
-      console.log('✅ Đã xóa lịch sử chat');
+      
+      console.log('✅ Đã bắt đầu cuộc trò chuyện mới với session:', newSessionId);
     }
   };
 
@@ -304,16 +320,32 @@ function ChatBot(props) {
     setUserInfo(tempUserInfo);
     setShowUserInfoPopup(false);
     console.log('✅ Thông tin người dùng đã được lưu:', tempUserInfo);
+    
+    // Check if there's a sessionId in URL to load after login
+    const urlSessionId = getSessionIdFromUrl();
+    if (urlSessionId) {
+      console.log('🔗 Phát hiện sessionId trong URL sau khi đăng nhập:', urlSessionId);
+      // Use setTimeout to ensure userInfo state is updated first
+      setTimeout(() => {
+        loadConversation(urlSessionId);
+      }, 100);
+    }
   };
 
   // Function to reset user info and start new session
   const handleNewSession = () => {
     setUserInfo(null);
-    setSessionId(generateSessionId());
+    const newSessionId = generateSessionId();
+    setSessionId(newSessionId);
     setShowUserInfoPopup(true);
+    
+    // Clear URL parameters when logging out
+    updateUrlWithSessionId(null);
+    
     SetDataChat([["start", ["Xin chào! Đây là HUMG Chatbot, trợ lý đắc lực dành cho bạn! Bạn muốn tìm kiếm thông tin về những gì? 😄", null]]]);
     SetChatHistory([]);
     setFeedbackState({});
+    setConversationHistory([]); // Clear conversation history
     setTempUserInfo({
       mssv: '',
       userName: '',
@@ -321,14 +353,186 @@ function ChatBot(props) {
     });
   };
 
+  // Function to fetch conversation history from API
+  const fetchConversationHistory = async () => {
+    if (!userInfo?.mssv) return;
+    
+    setIsLoadingConversations(true);
+    try {
+      console.log('🔄 Đang tải lịch sử cuộc trò chuyện...');
+      
+      const formData = new FormData();
+      formData.append('mssv', userInfo.mssv);
+
+      const response = await fetch(GET_CONV_TITLE_ENDPOINT, {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+      
+      if (result.status_code === 200 && result.data?.data) {
+        setConversationHistory(result.data.data);
+        console.log('✅ Đã tải lịch sử cuộc trò chuyện:', result.data.data.length, 'cuộc trò chuyện');
+      } else {
+        console.warn('⚠️ Không thể tải lịch sử cuộc trò chuyện:', result.message);
+        setConversationHistory([]);
+      }
+    } catch (error) {
+      console.error('❌ Lỗi khi tải lịch sử cuộc trò chuyện:', error);
+      setConversationHistory([]);
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  };
+
+  // Utility functions for URL management
+  const updateUrlWithSessionId = (sessionIdParam) => {
+    const url = new URL(window.location);
+    if (sessionIdParam) {
+      url.searchParams.set('sessionId', sessionIdParam);
+    } else {
+      url.searchParams.delete('sessionId');
+    }
+    window.history.pushState({}, '', url);
+  };
+
+  const getSessionIdFromUrl = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('sessionId');
+  };
+
+  // Function to fetch chat conversation messages from API
+  const fetchChatConversation = async (sessionIdToLoad) => {
+    if (!userInfo?.mssv || !sessionIdToLoad) return false;
+    
+    setIsLoadingChatHistory(true);
+    try {
+      console.log('🔄 Đang tải tin nhắn cuộc trò chuyện:', sessionIdToLoad);
+      
+      const formData = new FormData();
+      formData.append('mssv', userInfo.mssv);
+      formData.append('sessionId', sessionIdToLoad);
+
+      const response = await fetch(GET_CHAT_CONV_ENDPOINT, {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+      
+      if (response.ok && result.data && Array.isArray(result.data)) {
+        // Convert API response to dataChat format
+        const convertedMessages = [["start", ["Xin chào! Đây là HUMG Chatbot, trợ lý đắc lực dành cho bạn! 😄", null]]];
+        
+        result.data.forEach((message) => {
+          if (message.human) {
+            convertedMessages.push(["end", [message.human]]);
+          }
+          if (message.ai) {
+            convertedMessages.push(["start", [message.ai, null]]);
+          }
+        });
+        
+        SetDataChat(convertedMessages);
+        
+        // Create chat history from human messages
+        const humanMessages = result.data
+          .map(msg => msg.human)
+          .filter(msg => msg)
+          .reverse(); // Reverse to show newest first
+        SetChatHistory(humanMessages);
+        
+        console.log('✅ Đã tải tin nhắn cuộc trò chuyện:', result.data.length, 'cặp tin nhắn');
+        return true;
+      } else {
+        console.warn('⚠️ Không thể tải tin nhắn cuộc trò chuyện:', result.message || 'Unknown error');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Lỗi khi tải tin nhắn cuộc trò chuyện:', error);
+      return false;
+    } finally {
+      setIsLoadingChatHistory(false);
+    }
+  };
+
+  // Function to load a specific conversation
+  const loadConversation = async (sessionIdToLoad) => {
+    if (sessionIdToLoad === sessionId && !getSessionIdFromUrl()) {
+      // Already viewing this conversation and URL is current
+      return;
+    }
+    
+    console.log('📖 Đang tải cuộc trò chuyện:', sessionIdToLoad);
+    
+    // Update URL with session ID
+    updateUrlWithSessionId(sessionIdToLoad);
+    
+    // Update session ID immediately
+    setSessionId(sessionIdToLoad);
+    
+    // Clear feedback state for new conversation
+    setFeedbackState({});
+    
+    // Try to fetch conversation messages
+    const success = await fetchChatConversation(sessionIdToLoad);
+    
+    if (!success) {
+      // If failed to load, show default message
+      SetDataChat([["start", ["Đã chuyển sang cuộc trò chuyện khác. Bạn có thể tiếp tục chat tại đây!", null]]]);
+      SetChatHistory([]);
+    }
+  };
+
+  // Load conversation history when user info changes
+  useEffect(() => {
+    if (userInfo?.mssv) {
+      fetchConversationHistory();
+    } else {
+      setConversationHistory([]);
+    }
+  }, [userInfo]);
+
+  // Also load conversation history on component mount (F5 refresh)
+  useEffect(() => {
+    // This will run when component mounts
+    if (userInfo?.mssv) {
+      console.log('🔄 Tải lịch sử cuộc trò chuyện khi khởi động component...');
+      fetchConversationHistory();
+      
+      // Check if there's a sessionId in URL and load that conversation
+      const urlSessionId = getSessionIdFromUrl();
+      if (urlSessionId && urlSessionId !== sessionId) {
+        console.log('🔗 Phát hiện sessionId trong URL, đang tải cuộc trò chuyện:', urlSessionId);
+        loadConversation(urlSessionId);
+      }
+    }
+  }, []); // Empty dependency array means this runs only once on mount
+
+  // Load conversation from URL when userInfo becomes available
+  useEffect(() => {
+    if (userInfo?.mssv) {
+      const urlSessionId = getSessionIdFromUrl();
+      if (urlSessionId && urlSessionId !== sessionId) {
+        console.log('👤 User đã đăng nhập, đang tải cuộc trò chuyện từ URL:', urlSessionId);
+        loadConversation(urlSessionId);
+      }
+    }
+  }, [userInfo]); // Run when userInfo changes
+
   // Updated SendMessageChat function for new API
   async function SendMessageChat() {
     if (promptInput !== "" && isLoading === false && userInfo) {
         SetTimeOfRequest(0);
         SetIsGen(true);
         const currentMessage = promptInput;
+        const isFirstMessageInSession = dataChat.length === 1; // Only welcome message exists
         SetPromptInput("");
         SetIsLoad(true);
+        
+        // Ensure URL is updated with current sessionId
+        updateUrlWithSessionId(sessionId);
         
         // Reset scroll state khi gửi tin nhắn mới
         setIsUserScrolledUp(false);
@@ -367,6 +571,14 @@ function ChatBot(props) {
             if (result.terms && result.terms.length > 0) {
               // You can add logic here to handle suggested terms/buttons
               console.log('Suggested terms:', result.terms);
+            }
+
+            // Refresh conversation history if this was the first message in a new session
+            if (isFirstMessageInSession) {
+              console.log('🔄 Làm mới lịch sử cuộc trò chuyện sau tin nhắn đầu tiên...');
+              setTimeout(() => {
+                fetchConversationHistory();
+              }, 1000); // Small delay to ensure the conversation is saved on server
             }
           } else {
             throw new Error(result.message || 'API Error');
@@ -770,42 +982,120 @@ function ChatBot(props) {
           <div className="bg-gray-50 text-base-content rounded-2xl p-4 h-[calc(100vh-10rem)] overflow-auto sticky top-20">
             <div className="flex justify-between items-center mb-2">
               <h2 className="font-bold text-sm">
-                Lịch sử trò chuyện
+                📝 Lịch sử trò chuyện
               </h2>
-              {chatHistory.length > 0 && (
-                <button
-                  onClick={clearChatHistory}
-                  className="btn btn-ghost btn-xs text-red-500 hover:bg-red-100 tooltip"
-                  data-tip="Xóa toàn bộ lịch sử"
-                >
-                  <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-            <ul className="menu text-sm p-0">
-              {chatHistory.map((question, i) => (
-                <li
-                  key={i}
-                  className="max-h-12 py-1"
-                  onClick={() => {
-                    if (promptInput === "" && !isLoading) {
-                      SetPromptInput(question);
-                    }
-                  }}
-                >
-                  <a
-                    className={
-                      "text-[14px] hover:bg-gray-200 font-medium rounded-md  " +
-                      (promptInput === "" && !isLoading
-                        ? "cursor-pointer"
-                        : "cursor-not-allowed opacity-50")
-                    }
+              <div className="flex gap-1">
+                {userInfo && (
+                  <button
+                    onClick={fetchConversationHistory}
+                    disabled={isLoadingConversations}
+                    className="btn btn-ghost btn-xs text-blue-500 hover:bg-blue-100 tooltip"
+                    data-tip="Làm mới lịch sử"
                   >
-                    {question.length > 30 ? question.substring(0, 30) + "..." : question}
-                  </a>
-                </li>
-              ))}
-            </ul>
+                    <FontAwesomeIcon 
+                      icon={faRotateRight} 
+                      className={`w-3 h-3 ${isLoadingConversations ? 'animate-spin' : ''}`} 
+                    />
+                  </button>
+                )}
+                {conversationHistory.length > 0 && (
+                  <button
+                    onClick={clearChatHistory}
+                    className="btn btn-ghost btn-xs text-red-500 hover:bg-red-100 tooltip"
+                    data-tip="Bắt đầu cuộc trò chuyện mới"
+                  >
+                    <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {!userInfo ? (
+              <div className="text-center text-gray-500 text-xs py-4">
+                <p>Vui lòng đăng nhập để xem lịch sử trò chuyện</p>
+              </div>
+            ) : isLoadingConversations ? (
+              <div className="text-center text-gray-500 text-xs py-4">
+                <ScaleLoader
+                  color="#6b7280"
+                  loading={true}
+                  height={8}
+                  width={2}
+                  aria-label="Loading Conversations"
+                />
+                <p className="mt-2">Đang tải...</p>
+              </div>
+            ) : conversationHistory.length > 0 ? (
+              <ul className="menu text-sm p-0">
+                {conversationHistory.map((conversation, i) => (
+                  <li
+                    key={conversation.session_id}
+                    className="max-h-12 py-1"
+                    onClick={() => loadConversation(conversation.session_id)}
+                  >
+                    <a
+                      className={`text-[14px] hover:bg-gray-200 font-medium rounded-md cursor-pointer transition-colors ${
+                        conversation.session_id === sessionId 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : ''
+                      }`}
+                      title={conversation.title}
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        <FontAwesomeIcon icon={faMessage} className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">
+                          {conversation.title.length > 25 
+                            ? conversation.title.substring(0, 25) + "..." 
+                            : conversation.title}
+                        </span>
+                      </div>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-center text-gray-500 text-xs py-4">
+                <p>Chưa có cuộc trò chuyện nào</p>
+                <p className="mt-1">Hãy bắt đầu chat để tạo lịch sử!</p>
+              </div>
+            )}
+
+            {/* Fallback: Recent questions from current session */}
+            {userInfo && chatHistory.length > 0 && (
+              <>
+                <div className="divider my-2"></div>
+                <div className="mb-2">
+                  <h3 className="font-bold text-xs text-gray-600">
+                    💭 Câu hỏi gần đây
+                  </h3>
+                </div>
+                <ul className="menu text-sm p-0">
+                  {chatHistory.slice(0, 3).map((question, i) => (
+                    <li
+                      key={`recent-${i}`}
+                      className="max-h-12 py-1"
+                      onClick={() => {
+                        if (promptInput === "" && !isLoading) {
+                          SetPromptInput(question);
+                        }
+                      }}
+                    >
+                      <a
+                        className={
+                          "text-[12px] hover:bg-gray-200 font-medium rounded-md opacity-70 " +
+                          (promptInput === "" && !isLoading
+                            ? "cursor-pointer"
+                            : "cursor-not-allowed opacity-50")
+                        }
+                        title={question}
+                      >
+                        {question.length > 20 ? question.substring(0, 20) + "..." : question}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
         </div>
 
@@ -1011,6 +1301,29 @@ function ChatBot(props) {
               ) : (
                 ""
               )}
+
+              {isLoadingChatHistory ? (
+                <div className="chat chat-start">
+                  <div className="chat-image avatar">
+                    <div className="w-10 rounded-full border-2 border-blue-500">
+                      <img src={robot_img} />
+                    </div>
+                  </div>
+                  <div className="chat-bubble chat-bubble-info">
+                    <ScaleLoader
+                      color="#000000"
+                      loading={true}
+                      height={10}
+                      width={10}
+                      aria-label="Loading Chat History"
+                      data-testid="loader"
+                    />
+                    <p className="text-xs font-medium">Đang tải lịch sử chat...</p>
+                  </div>
+                </div>
+              ) : (
+                ""
+              )}
               <div ref={messagesEndRef} />
               
               {/* Nút scroll to bottom */}
@@ -1046,10 +1359,10 @@ function ChatBot(props) {
                     <button
                       onClick={clearChatHistory}
                       className="btn btn-ghost btn-xs text-red-500 hover:bg-red-100 tooltip"
-                      data-tip="Xóa lịch sử chat"
+                      data-tip="Bắt đầu cuộc trò chuyện mới"
                     >
                       <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
-                      <span className="ml-1 text-xs">Xóa lịch sử</span>
+                      <span className="ml-1 text-xs">Cuộc trò chuyện mới</span>
                     </button>
                   </div>
                 )}
@@ -1060,12 +1373,12 @@ function ChatBot(props) {
                   className="mr-1 shadow-xl border-2 focus:outline-none px-2 rounded-2xl input-primary col-start-1 col-end-11"
                   onChange={onChangeHandler}
                   onKeyDown={handleKeyDown}
-                  disabled={isGen || !userInfo}
+                  disabled={isGen || !userInfo || isLoadingChatHistory}
                   value={promptInput}
                 />
 
                 <button
-                  disabled={isGen || !userInfo}
+                  disabled={isGen || !userInfo || isLoadingChatHistory}
                   onClick={() => SendMessageChat()}
                   className="drop-shadow-md rounded-2xl col-start-11 col-end-12 btn btn-active btn-primary btn-square bg-gradient-to-tl from-transparent via-blue-600 to-indigo-500"
                 >
