@@ -5,7 +5,8 @@ import ScaleLoader from "react-spinners/ScaleLoader";
 import { TypeAnimation } from "react-type-animation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMessage, faCopy, faThumbsUp, faThumbsDown } from "@fortawesome/free-regular-svg-icons";
-import { faVolumeHigh, faRotateRight, faTrash, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faVolumeHigh, faRotateRight, faTrash, faUser, faPlus, faSearch, faCog, faMicrophone, faImage, faMagnifyingGlass, faSun, faMoon } from "@fortawesome/free-solid-svg-icons";
+
 // Kiểm tra localStorage có khả dụng không
 const isLocalStorageAvailable = () => {
   try {
@@ -26,11 +27,9 @@ const getStorageItem = (key) => {
   if (isLocalStorageAvailable()) {
     return localStorage.getItem(key);
   }
-  // Fallback to sessionStorage
   try {
     return sessionStorage.getItem(key);
   } catch (error) {
-    // Fallback to memory storage
     return fallbackStorage[key] || null;
   }
 };
@@ -45,12 +44,10 @@ const setStorageItem = (key, value) => {
     }
   }
   
-  // Fallback to sessionStorage
   try {
     sessionStorage.setItem(key, value);
     return true;
   } catch (error) {
-    // Fallback to memory storage
     fallbackStorage[key] = value;
     return true;
   }
@@ -68,7 +65,6 @@ const removeStorageItem = (key) => {
   try {
     sessionStorage.removeItem(key);
   } catch (error) {
-    // Remove from memory storage
     delete fallbackStorage[key];
   }
 };
@@ -100,7 +96,7 @@ const getStoredChatData = () => {
   };
 };
 
-// New API endpoints
+// API endpoints
 const API_BASE_URL = "http://34.87.17.241:9999";
 const CHATBOT_ENDPOINT = `${API_BASE_URL}/chatbot_proactive`;
 const GET_CONV_TITLE_ENDPOINT = `${API_BASE_URL}/get_conv_title`;
@@ -111,12 +107,14 @@ const generateSessionId = () => {
   return 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
 };
 
-// Removed GoogleGenerativeAI SDK - using direct API calls
-function ChatBot(props) {
+function ChatBot() {
   const messagesEndRef = useRef(null);
   const [timeOfRequest, SetTimeOfRequest] = useState(0);
   let [promptInput, SetPromptInput] = useState("");
   let [sourceData, SetSourceData] = useState("nttu");
+  
+  // Dark mode state
+  const [isDarkMode, setIsDarkMode] = useState(false);
   
   // Khởi tạo state với dữ liệu từ localStorage
   const initialData = getStoredChatData();
@@ -136,6 +134,10 @@ function ChatBot(props) {
   const [conversationHistory, setConversationHistory] = useState([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(false);
   const [isLoadingChatHistory, setIsLoadingChatHistory] = useState(false);
+  
+  // Sidebar states
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [selectedSession, setSelectedSession] = useState(null);
   
   const commonQuestions=[
     "Điểm chuẩn của ngành Quản trị Kinh doanh năm 2024 theo điểm thi THPT",
@@ -191,7 +193,7 @@ function ChatBot(props) {
   const isNearBottom = () => {
     if (!chatAreaRef.current) return true;
     const { scrollTop, scrollHeight, clientHeight } = chatAreaRef.current;
-    const threshold = 50; // Giảm threshold xuống 50px để nhạy hơn
+    const threshold = 50;
     return Math.abs(scrollHeight - scrollTop - clientHeight) <= threshold;
   };
 
@@ -216,18 +218,13 @@ function ChatBot(props) {
     const isAtBottom = isNearBottom();
     const userScrolledUp = !isAtBottom;
     
-    // Chỉ update state nếu có thay đổi để tránh re-render không cần thiết
     setIsUserScrolledUp(prev => prev !== userScrolledUp ? userScrolledUp : prev);
     setShowScrollButton(prev => prev !== userScrolledUp ? userScrolledUp : prev);
   }, []);
 
   // Auto scroll chỉ khi cần thiết
   useEffect(() => {
-    // Chỉ auto scroll khi:
-    // 1. User không scroll lên trên
-    // 2. Có tin nhắn mới hoặc đang loading
     if (!isUserScrolledUp) {
-      // Delay nhỏ để đảm bảo DOM đã update
       const timeoutId = setTimeout(() => {
         scrollToEnd();
       }, 100);
@@ -243,9 +240,9 @@ function ChatBot(props) {
     if (isGen && !isUserScrolledUp) {
       intervalId = setInterval(() => {
         if (!isUserScrolledUp) {
-          scrollToEnd(false); // Scroll không smooth để mượt hơn
+          scrollToEnd(false);
         }
-      }, 200); // Giảm frequency xuống 200ms
+      }, 200);
     }
     
     return () => {
@@ -255,12 +252,10 @@ function ChatBot(props) {
     };
   }, [isGen, isUserScrolledUp]);
 
-  // Handle input change
   const onChangeHandler = (event) => {
     SetPromptInput(event.target.value);
   };
 
-  // Handle Enter key press
   const handleKeyDown = (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -268,1195 +263,776 @@ function ChatBot(props) {
     }
   };
 
-  // Hàm xóa lịch sử chat hiện tại
   const clearChatHistory = () => {
-    if (window.confirm('Bạn có chắc chắn muốn xóa cuộc trò chuyện hiện tại và bắt đầu cuộc trò chuyện mới?')) {
-      // Start a new session
-      const newSessionId = generateSessionId();
-      setSessionId(newSessionId);
-      
-      // Update URL with new session ID
-      updateUrlWithSessionId(newSessionId);
-      
-      // Clear current chat data
-      SetDataChat([["start", ["Xin chào! Đây là HUMG Chatbot, trợ lý đắc lực dành cho bạn! Bạn muốn tìm kiếm thông tin về những gì? 😄", null]]]);
-      SetChatHistory([]);
-      setFeedbackState({});
-      
-      console.log('✅ Đã bắt đầu cuộc trò chuyện mới với session:', newSessionId);
-    }
-  };
-
-  // Kiểm tra storage status khi component mount
-  useEffect(() => {
-    console.log('🔍 Kiểm tra storage availability...');
-    console.log('Domain hiện tại:', window.location.hostname);
-    console.log('Protocol:', window.location.protocol);
-    
-    if (isLocalStorageAvailable()) {
-      console.log('✅ localStorage khả dụng');
-      setStorageStatus('available');
-    } else {
-      console.log('⚠️ localStorage không khả dụng, thử sessionStorage...');
-      try {
-        sessionStorage.setItem('test', 'test');
-        sessionStorage.removeItem('test');
-        console.log('✅ sessionStorage khả dụng');
-        setStorageStatus('limited');
-      } catch (error) {
-        console.log('❌ Không có storage nào khả dụng:', error);
-        setStorageStatus('unavailable');
-      }
-    }
-  }, []);
-
-  // Function to handle user info submission
-  const handleUserInfoSubmit = () => {
-    if (!tempUserInfo.mssv.trim() || !tempUserInfo.userName.trim()) {
-      alert('Vui lòng điền đầy đủ thông tin!');
-      return;
-    }
-    
-    setUserInfo(tempUserInfo);
-    setShowUserInfoPopup(false);
-    console.log('✅ Thông tin người dùng đã được lưu:', tempUserInfo);
-    
-    // Check if there's a sessionId in URL to load after login
-    const urlSessionId = getSessionIdFromUrl();
-    if (urlSessionId) {
-      console.log('🔗 Phát hiện sessionId trong URL sau khi đăng nhập:', urlSessionId);
-      // Use setTimeout to ensure userInfo state is updated first
-      setTimeout(() => {
-        loadConversation(urlSessionId);
-      }, 100);
-    }
-  };
-
-  // Function to reset user info and start new session
-  const handleNewSession = () => {
-    setUserInfo(null);
-    const newSessionId = generateSessionId();
-    setSessionId(newSessionId);
-    setShowUserInfoPopup(true);
-    
-    // Clear URL parameters when logging out
-    updateUrlWithSessionId(null);
-    
-    SetDataChat([["start", ["Xin chào! Đây là HUMG Chatbot, trợ lý đắc lực dành cho bạn! Bạn muốn tìm kiếm thông tin về những gì? 😄", null]]]);
+    SetDataChat([["start", ["Xin chào! Đây là HUMG Chatbot, trợ lý đắc lực dành cho bạn! Bạn muốn tìm kiếm thông tin về những gì? Đừng quên chọn nguồn tham khảo phù hợp để mình có thể giúp bạn tìm kiếm thông tin chính xác nhất nha. 😄", null]]]);
     SetChatHistory([]);
     setFeedbackState({});
-    setConversationHistory([]); // Clear conversation history
-    setTempUserInfo({
-      mssv: '',
-      userName: '',
-      nameBot: 'DieuLinh'
-    });
+    const newSessionId = generateSessionId();
+    setSessionId(newSessionId);
+    setUserInfo(null);
+    setShowUserInfoPopup(true);
+    removeStorageItem('humg-chatbot-data');
+    console.log('🧹 Đã xóa lịch sử chat');
   };
 
-  // Function to fetch conversation history from API
+  const handleUserInfoSubmit = () => {
+    if (tempUserInfo.mssv && tempUserInfo.userName) {
+      setUserInfo(tempUserInfo);
+      setShowUserInfoPopup(false);
+      console.log('✅ Đã lưu thông tin người dùng:', tempUserInfo);
+    } else {
+      alert('Vui lòng nhập đầy đủ thông tin!');
+    }
+  };
+
+  const handleNewSession = () => {
+    const newSessionId = generateSessionId();
+    setSessionId(newSessionId);
+    SetDataChat([["start", ["Xin chào! Đây là HUMG Chatbot, trợ lý đắc lực dành cho bạn! Bạn muốn tìm kiếm thông tin về những gì? Đừng quên chọn nguồn tham khảo phù hợp để mình có thể giúp bạn tìm kiếm thông tin chính xác nha. 😄", null]]]);
+    SetChatHistory([]);
+    setFeedbackState({});
+    console.log('🆕 Đã tạo phiên chat mới:', newSessionId);
+  };
+
   const fetchConversationHistory = async () => {
-    if (!userInfo?.mssv) return;
-    
+    if (!userInfo?.mssv) {
+      console.log('❌ Không có thông tin người dùng để tải lịch sử');
+      return;
+    }
+
     setIsLoadingConversations(true);
     try {
-      console.log('🔄 Đang tải lịch sử cuộc trò chuyện...');
-      
-      const formData = new FormData();
-      formData.append('mssv', userInfo.mssv);
-
       const response = await fetch(GET_CONV_TITLE_ENDPOINT, {
         method: 'POST',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mssv: userInfo.mssv
+        })
       });
 
-      const result = await response.json();
-      
-      if (result.status_code === 200 && result.data?.data) {
-        setConversationHistory(result.data.data);
-        console.log('✅ Đã tải lịch sử cuộc trò chuyện:', result.data.data.length, 'cuộc trò chuyện');
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📚 Đã tải lịch sử hội thoại:', data);
+        setConversationHistory(data.conversations || []);
       } else {
-        console.warn('⚠️ Không thể tải lịch sử cuộc trò chuyện:', result.message);
-        setConversationHistory([]);
+        console.log('❌ Lỗi khi tải lịch sử hội thoại:', response.status);
       }
     } catch (error) {
-      console.error('❌ Lỗi khi tải lịch sử cuộc trò chuyện:', error);
-      setConversationHistory([]);
+      console.log('❌ Lỗi network khi tải lịch sử hội thoại:', error);
     } finally {
       setIsLoadingConversations(false);
     }
   };
 
-  // Utility functions for URL management
   const updateUrlWithSessionId = (sessionIdParam) => {
     const url = new URL(window.location);
-    if (sessionIdParam) {
-      url.searchParams.set('sessionId', sessionIdParam);
-    } else {
-      url.searchParams.delete('sessionId');
-    }
-    window.history.pushState({}, '', url);
+    url.searchParams.set('session', sessionIdParam);
+    window.history.replaceState({}, '', url);
   };
 
   const getSessionIdFromUrl = () => {
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('sessionId');
+    return urlParams.get('session');
   };
 
-  // Function to fetch chat conversation messages from API
   const fetchChatConversation = async (sessionIdToLoad) => {
-    if (!userInfo?.mssv || !sessionIdToLoad) return false;
-    
+    if (!userInfo?.mssv) {
+      console.log('❌ Không có thông tin người dùng để tải hội thoại');
+      return;
+    }
+
     setIsLoadingChatHistory(true);
     try {
-      console.log('🔄 Đang tải tin nhắn cuộc trò chuyện:', sessionIdToLoad);
-      
-      const formData = new FormData();
-      formData.append('mssv', userInfo.mssv);
-      formData.append('sessionId', sessionIdToLoad);
-
       const response = await fetch(GET_CHAT_CONV_ENDPOINT, {
         method: 'POST',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mssv: userInfo.mssv,
+          session_id: sessionIdToLoad
+        })
       });
 
-      const result = await response.json();
-      
-      if (response.ok && result.data && Array.isArray(result.data)) {
-        // Convert API response to dataChat format
-        const convertedMessages = [["start", ["Xin chào! Đây là HUMG Chatbot, trợ lý đắc lực dành cho bạn! 😄", null]]];
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📖 Đã tải hội thoại:', data);
         
-        result.data.forEach((message) => {
-          if (message.human) {
-            convertedMessages.push(["end", [message.human]]);
-          }
-          if (message.ai) {
-            convertedMessages.push(["start", [message.ai, null]]);
-          }
-        });
-        
-        SetDataChat(convertedMessages);
-        
-        // Create chat history from human messages
-        const humanMessages = result.data
-          .map(msg => msg.human)
-          .filter(msg => msg)
-          .reverse(); // Reverse to show newest first
-        SetChatHistory(humanMessages);
-        
-        console.log('✅ Đã tải tin nhắn cuộc trò chuyện:', result.data.length, 'cặp tin nhắn');
-        return true;
+        if (data.messages && data.messages.length > 0) {
+          const formattedMessages = data.messages.map(msg => [
+            msg.role === 'user' ? 'user' : 'bot',
+            msg.content,
+            msg.timestamp
+          ]);
+          
+          SetDataChat(formattedMessages);
+          setSessionId(sessionIdToLoad);
+          updateUrlWithSessionId(sessionIdToLoad);
+          console.log('✅ Đã tải hội thoại thành công');
+        } else {
+          console.log('⚠️ Hội thoại trống hoặc không tồn tại');
+        }
       } else {
-        console.warn('⚠️ Không thể tải tin nhắn cuộc trò chuyện:', result.message || 'Unknown error');
-        return false;
+        console.log('❌ Lỗi khi tải hội thoại:', response.status);
       }
     } catch (error) {
-      console.error('❌ Lỗi khi tải tin nhắn cuộc trò chuyện:', error);
-      return false;
+      console.log('❌ Lỗi network khi tải hội thoại:', error);
     } finally {
       setIsLoadingChatHistory(false);
     }
   };
 
-  // Function to load a specific conversation
   const loadConversation = async (sessionIdToLoad) => {
-    if (sessionIdToLoad === sessionId && !getSessionIdFromUrl()) {
-      // Already viewing this conversation and URL is current
+    if (sessionIdToLoad === sessionId) {
+      console.log('🔄 Đang ở cùng phiên chat');
       return;
     }
-    
-    console.log('📖 Đang tải cuộc trò chuyện:', sessionIdToLoad);
-    
-    // Update URL with session ID
-    updateUrlWithSessionId(sessionIdToLoad);
-    
-    // Update session ID immediately
-    setSessionId(sessionIdToLoad);
-    
-    // Clear feedback state for new conversation
-    setFeedbackState({});
-    
-    // Try to fetch conversation messages
-    const success = await fetchChatConversation(sessionIdToLoad);
-    
-    if (!success) {
-      // If failed to load, show default message
-      SetDataChat([["start", ["Đã chuyển sang cuộc trò chuyện khác. Bạn có thể tiếp tục chat tại đây!", null]]]);
-      SetChatHistory([]);
-    }
+
+    console.log('📂 Đang tải hội thoại:', sessionIdToLoad);
+    await fetchChatConversation(sessionIdToLoad);
   };
 
-  // Load conversation history when user info changes
+  // Load conversation from URL on mount
   useEffect(() => {
-    if (userInfo?.mssv) {
-      fetchConversationHistory();
-    } else {
-      setConversationHistory([]);
+    const sessionFromUrl = getSessionIdFromUrl();
+    if (sessionFromUrl && userInfo?.mssv) {
+      loadConversation(sessionFromUrl);
     }
   }, [userInfo]);
 
-  // Also load conversation history on component mount (F5 refresh)
-  useEffect(() => {
-    // This will run when component mounts
-    if (userInfo?.mssv) {
-      console.log('🔄 Tải lịch sử cuộc trò chuyện khi khởi động component...');
-      fetchConversationHistory();
-      
-      // Check if there's a sessionId in URL and load that conversation
-      const urlSessionId = getSessionIdFromUrl();
-      if (urlSessionId && urlSessionId !== sessionId) {
-        console.log('🔗 Phát hiện sessionId trong URL, đang tải cuộc trò chuyện:', urlSessionId);
-        loadConversation(urlSessionId);
-      }
-    }
-  }, []); // Empty dependency array means this runs only once on mount
-
-  // Load conversation from URL when userInfo becomes available
-  useEffect(() => {
-    if (userInfo?.mssv) {
-      const urlSessionId = getSessionIdFromUrl();
-      if (urlSessionId && urlSessionId !== sessionId) {
-        console.log('👤 User đã đăng nhập, đang tải cuộc trò chuyện từ URL:', urlSessionId);
-        loadConversation(urlSessionId);
-      }
-    }
-  }, [userInfo]); // Run when userInfo changes
-
-  // Updated SendMessageChat function for new API
   async function SendMessageChat() {
-    if (promptInput !== "" && isLoading === false && userInfo) {
-        SetTimeOfRequest(0);
-        SetIsGen(true);
-        const currentMessage = promptInput;
-        const isFirstMessageInSession = dataChat.length === 1; // Only welcome message exists
-        SetPromptInput("");
-        SetIsLoad(true);
-        
-        // Ensure URL is updated with current sessionId
-        updateUrlWithSessionId(sessionId);
-        
-        // Reset scroll state khi gửi tin nhắn mới
-        setIsUserScrolledUp(false);
-        setShowScrollButton(false);
-        
-        SetDataChat((prev) => [...prev, ["end", [currentMessage]]]);
-        SetChatHistory((prev) => [currentMessage, ...prev]);
-        
-        // Force scroll to bottom khi user gửi tin nhắn
-        setTimeout(() => {
-          scrollToEnd();
-        }, 50);
+    if (!promptInput.trim() || isLoading) return;
 
-        try {
-          const formData = new FormData();
-          formData.append('idRequest', sessionId);
-          formData.append('nameBot', userInfo.nameBot);
-          formData.append('mssv', userInfo.mssv);
-          formData.append('userName', userInfo.userName);
-          formData.append('inputText', currentMessage);
+    const userMessage = promptInput.trim();
+    SetPromptInput("");
+    
+    // Add user message to chat
+    SetDataChat(prev => [...prev, ["user", userMessage]]);
+    
+    SetIsLoad(true);
+    SetIsGen(true);
+    
+    try {
+      const requestData = {
+        message: userMessage,
+        source: sourceData,
+        session_id: sessionId,
+        user_info: userInfo || tempUserInfo
+      };
 
-          const response = await fetch(CHATBOT_ENDPOINT, {
-            method: 'POST',
-            body: formData
-          });
+      console.log('📤 Đang gửi tin nhắn:', requestData);
 
-          const result = await response.json();
-          
-          if (result.status === 200) {
-            SetDataChat((prev) => [
-              ...prev,
-              ["start", [result.content, null]], // Using content instead of answer
-            ]);
-            
-            // Handle suggested terms if available
-            if (result.terms && result.terms.length > 0) {
-              // You can add logic here to handle suggested terms/buttons
-              console.log('Suggested terms:', result.terms);
-            }
+      const response = await fetch(CHATBOT_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
 
-            // Refresh conversation history if this was the first message in a new session
-            if (isFirstMessageInSession) {
-              console.log('🔄 Làm mới lịch sử cuộc trò chuyện sau tin nhắn đầu tiên...');
-              setTimeout(() => {
-                fetchConversationHistory();
-              }, 1000); // Small delay to ensure the conversation is saved on server
-            }
-          } else {
-            throw new Error(result.message || 'API Error');
-          }
-          
-          SetIsLoad(false);
-        } catch (error) {
-          console.error('Chat API Error:', error);
-          SetDataChat((prev) => [
-            ...prev,
-            ["start", ["Ôi không! 😵‍💫 Chatbot đang bị lạc đường và không thể kết nối tới máy chủ rồi... Có lẽ server đang bận uống cà phê ☕ hoặc đang nghỉ giải lao 😅. Bạn vui lòng liên hệ hotline 📞 để tụi mình hỗ trợ nhanh nhất nhé! Cảm ơn bạn đã kiên nhẫn với tụi mình! 💖", null]],
-          ]);
-          SetIsLoad(false);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📥 Phản hồi từ chatbot:', data);
+        
+        const botResponse = data.response || "Xin lỗi, tôi không thể xử lý yêu cầu của bạn.";
+        
+        SetDataChat(prev => [...prev, ["bot", botResponse]]);
+        SetChatHistory(prev => [...prev, { user: userMessage, bot: botResponse }]);
+        
+        // Update session ID if provided
+        if (data.session_id) {
+          setSessionId(data.session_id);
+          updateUrlWithSessionId(data.session_id);
         }
-    } else if (!userInfo) {
-      setShowUserInfoPopup(true);
+        
+        SetTimeOfRequest(Date.now());
+      } else {
+        console.log('❌ Lỗi API:', response.status);
+        const errorMessage = "Xin lỗi, có lỗi xảy ra khi xử lý yêu cầu của bạn. Vui lòng thử lại.";
+        SetDataChat(prev => [...prev, ["bot", errorMessage]]);
+      }
+    } catch (error) {
+      console.log('❌ Lỗi network:', error);
+      const errorMessage = "Xin lỗi, có lỗi kết nối. Vui lòng kiểm tra kết nối internet và thử lại.";
+      SetDataChat(prev => [...prev, ["bot", errorMessage]]);
+    } finally {
+      SetIsLoad(false);
+      SetIsGen(false);
     }
   }
 
-  // Initialize reference state
-  const [reference, setReference] = useState({
-    content: '',
-    url: '',
-    title: ''
-  });
-
-  // Handle reference click
   const handleReferenceClick = (source, sourceType) => {
-    setReference({
-      content: source.page_content || source.content || 'Không có nội dung',
-      url: source.metadata?.source || source.url || '#',
-      title: sourceType === "wiki" ? source.metadata?.title : "Tài liệu tham khảo"
-    });
+    console.log('🔗 Click vào nguồn tham khảo:', source, sourceType);
+    // Có thể mở link trong tab mới hoặc hiển thị thông tin chi tiết
   };
 
-  // Handle copy message
   const handleCopyMessage = (messageIndex, messageText) => {
     navigator.clipboard.writeText(messageText).then(() => {
-      console.log('✅ Đã sao chép tin nhắn');
-      // Show toast notification
-      const toast = document.createElement('div');
-      toast.className = 'toast toast-top toast-center';
-      toast.innerHTML = `
-        <div class="alert alert-success">
-          <span>📋 Đã sao chép tin nhắn!</span>
-        </div>
-      `;
-      document.body.appendChild(toast);
-      setTimeout(() => {
-        if (document.body.contains(toast)) {
-          document.body.removeChild(toast);
-        }
-      }, 3000);
+      console.log('📋 Đã sao chép tin nhắn');
+      // Có thể hiển thị toast notification
     }).catch(err => {
-      console.error('❌ Lỗi sao chép:', err);
+      console.log('❌ Lỗi khi sao chép:', err);
     });
   };
 
-  // Handle thumbs up feedback
   const handleThumbsUp = (messageIndex, messageText) => {
-    // Kiểm tra xem đã feedback chưa
-    if (feedbackState[messageIndex]?.hasSubmitted) {
-      return; // Đã feedback rồi, không cho phép thay đổi
+    const newFeedbackState = { ...feedbackState };
+    if (newFeedbackState[messageIndex] === 'up') {
+      delete newFeedbackState[messageIndex];
+    } else {
+      newFeedbackState[messageIndex] = 'up';
     }
-
-    setFeedbackState(prev => ({
-      ...prev,
-      [messageIndex]: { 
-        thumbsUp: true, 
-        thumbsDown: false, 
-        hasSubmitted: true,
-        messageText: messageText
-      }
-    }));
+    setFeedbackState(newFeedbackState);
     
-    // Gửi feedback lên Google Sheets (if still needed)
-    sendFeedbackToGoogleSheets(messageText, "positive", messageIndex);
+    sendFeedbackToGoogleSheets(messageText, 'positive', messageIndex);
+    console.log('👍 Đã đánh giá tích cực cho tin nhắn:', messageIndex);
   };
 
-  // Handle thumbs down feedback
   const handleThumbsDown = (messageIndex, messageText) => {
-    // Kiểm tra xem đã feedback chưa
-    if (feedbackState[messageIndex]?.hasSubmitted) {
-      return; // Đã feedback rồi, không cho phép thay đổi
+    const newFeedbackState = { ...feedbackState };
+    if (newFeedbackState[messageIndex] === 'down') {
+      delete newFeedbackState[messageIndex];
+    } else {
+      newFeedbackState[messageIndex] = 'down';
     }
-
-    setFeedbackState(prev => ({
-      ...prev,
-      [messageIndex]: { 
-        thumbsUp: false, 
-        thumbsDown: true, 
-        hasSubmitted: true,
-        messageText: messageText
-      }
-    }));
+    setFeedbackState(newFeedbackState);
     
-    // Gửi feedback lên Google Sheets
-    sendFeedbackToGoogleSheets(messageText, "negative", messageIndex);
+    sendFeedbackToGoogleSheets(messageText, 'negative', messageIndex);
+    console.log('👎 Đã đánh giá tiêu cực cho tin nhắn:', messageIndex);
   };
 
-  // Hàm gửi feedback lên Google Sheets
   const sendFeedbackToGoogleSheets = async (messageText, feedbackType, messageIndex) => {
-    const feedbackData = {
-      timestamp: new Date().toISOString(),
-      messageText: messageText,
-      feedbackType: feedbackType, // "positive" hoặc "negative"
-      messageIndex: messageIndex,
-      userAgent: navigator.userAgent,
-      url: window.location.href,
-      userInfo: userInfo?.userName || 'Anonymous'
-    };
-
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzftIhc4A6GLa9Lg7GLTguxluzvNTzfffHEuS1IPSeA5W6cbbXlJ-25H-1y_8gShTE/exec";
-    
-    console.log("🚀 Đang gửi feedback...", { feedbackType, messageIndex });
-
     try {
-      const response = await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(feedbackData)
-      });
+      const feedbackData = {
+        message: messageText,
+        feedback: feedbackType,
+        message_index: messageIndex,
+        timestamp: new Date().toISOString(),
+        user_info: userInfo || tempUserInfo,
+        session_id: sessionId
+      };
+
+      // Gửi feedback đến Google Sheets (nếu có endpoint)
+      console.log('📊 Đang gửi feedback:', feedbackData);
       
-      if (response.ok) {
-        console.log("✅ Feedback đã được gửi!");
-      }
+      // Có thể implement gửi đến Google Sheets API ở đây
+      
     } catch (error) {
-      console.log("⚠️ Lỗi gửi feedback:", error);
-      // Store in localStorage as backup
-      try {
-        const existingFeedback = JSON.parse(localStorage.getItem('chatbot_feedback') || '[]');
-        existingFeedback.push(feedbackData);
-        localStorage.setItem('chatbot_feedback', JSON.stringify(existingFeedback));
-        console.log("💾 Feedback saved to localStorage for manual export");
-      } catch (e) {
-        console.error("Không thể save vào localStorage:", e);
-      }
+      console.log('❌ Lỗi khi gửi feedback:', error);
     }
   };
 
-  // Handle text-to-speech
   const handleReadAloud = async (messageText) => {
     try {
-      // Hiển thị loading state
-      const loadingToast = document.createElement('div');
-      loadingToast.className = 'toast toast-top toast-center';
-      loadingToast.innerHTML = `
-        <div class="alert alert-info flex flex-row items-center gap-2">
-          <span>🔊 Mình đang đọc nha ạ</span>
-        </div>
-      `;
-      document.body.appendChild(loadingToast);
-
-      console.log("🔊 Calling TTS API via ngrok...");
-
-      // Call TTS API
-      const ttsResponse = await fetch('https://aware-mutt-upward.ngrok-free.app/tts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': '69420'
-        },
-        body: JSON.stringify({
-          text: messageText,
-          voice_name: "Kore",
-          return_type: "stream"
-        })
-      });
-
-      console.log("📡 TTS API Response status:", ttsResponse.status);
-
-      if (!ttsResponse.ok) {
-        throw new Error(`TTS API error: ${ttsResponse.status}`);
-      }
-
-      // Remove loading toast
-      if (document.body.contains(loadingToast)) {
-        document.body.removeChild(loadingToast);
-      }
-
-      // Get audio blob from response
-      const audioBlob = await ttsResponse.blob();
-      console.log("🎵 Audio blob size:", audioBlob.size);
-
-      if (audioBlob.size === 0) {
-        throw new Error("Received empty audio data");
-      }
-
-      // Create audio URL and play
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      
-      audio.onended = () => {
-        URL.revokeObjectURL(audioUrl);
-        console.log("✅ Audio playback completed");
-      };
-      
-      audio.onerror = (error) => {
-        console.error("❌ Audio playback error:", error);
-        URL.revokeObjectURL(audioUrl);
-      };
-      
-      await audio.play();
-      console.log("🎵 Audio playing...");
-
-    } catch (error) {
-      console.error("❌ TTS Error:", error);
-      
-      // Remove loading toast if still there
-      const loadingToast = document.querySelector('.toast');
-      if (loadingToast) {
-        document.body.removeChild(loadingToast);
-      }
-
-      // Fallback to browser TTS
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(messageText);
         utterance.lang = 'vi-VN';
-        utterance.rate = 0.8;
-        speechSynthesis.speak(utterance);
+        utterance.rate = 0.9;
+        utterance.pitch = 1;
+        
+        // Dừng phát âm hiện tại nếu có
+        window.speechSynthesis.cancel();
+        
+        // Bắt đầu phát âm
+        window.speechSynthesis.speak(utterance);
+        
+        console.log('🔊 Đang đọc to tin nhắn');
       } else {
-        // Show error toast
-        const errorToast = document.createElement('div');
-        errorToast.className = 'toast toast-top toast-center';
-        errorToast.innerHTML = `
-          <div class="alert alert-error">
-            <span>❌ Không thể phát âm thanh</span>
-          </div>
-        `;
-        document.body.appendChild(errorToast);
-        setTimeout(() => {
-          if (document.body.contains(errorToast)) {
-            document.body.removeChild(errorToast);
-          }
-        }, 6000);
+        console.log('❌ Trình duyệt không hỗ trợ text-to-speech');
+      }
+    } catch (error) {
+      console.log('❌ Lỗi khi đọc to:', error);
+    }
+  };
+
+  const handleRetry = (messageIndex) => {
+    // Tìm tin nhắn user trước đó để gửi lại
+    const userMessage = dataChat[messageIndex - 1]?.[1];
+    if (userMessage) {
+      SetPromptInput(userMessage);
+      setTimeout(() => SendMessageChat(), 100);
+    }
+  };
+
+  const parseMarkdownToHTML = (text) => {
+    if (!text) return '';
+    // Nếu text là mảng hoặc object, chuyển thành string
+    if (typeof text !== 'string') {
+      try {
+        text = Array.isArray(text) ? text.join(' ') : String(text);
+      } catch {
+        return '';
       }
     }
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-sm">$1</code>')
+      .replace(/\n/g, '<br>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-blue-600 hover:underline">$1</a>');
   };
 
-  // Handle retry message
-  const handleRetry = (messageIndex) => {
-    // Lấy lại câu hỏi từ lịch sử và gửi lại
-    if (chatHistory.length > 0) {
-      const lastQuestion = chatHistory[0]; // Câu hỏi gần nhất
-      SetPromptInput(lastQuestion);
-    }
-    console.log("Thử lại tin nhắn", messageIndex);
-  };
-
-  // Function to parse markdown-style text and convert to HTML string
-  const parseMarkdownToHTML = (text) => {
-    if (typeof text !== 'string') return text;
-    
-    let html = text;
-    
-    // Parse ### text: format (bold + italic)
-    html = html.replace(/###\s*([^:\n]+):/g, '<strong style="font-weight: bold; font-style: italic; color: #7c3aed;">$1:</strong>');
-    
-    // Parse **text** format (bold)
-    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight: bold; color: #1d4ed8;">$1</strong>');
-    
-    return html;
-  };
-
-  // Function to parse markdown-style text and convert to JSX (for completed messages)
   const parseMarkdownToJSX = (text) => {
-    if (typeof text !== 'string') return text;
+    if (!text) return null;
     
-    // First handle ### format
-    let parts = text.split(/(###\s*[^:\n]+:)/g);
-    let result = [];
+    const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`|\[.*?\]\(.*?\))/g);
     
-    parts.forEach((part, index) => {
-      if (/###\s*[^:\n]+:/.test(part)) {
-        // Extract text between ### and :
-        const match = part.match(/###\s*([^:\n]+):/);
-        if (match) {
-          result.push(
-            <strong key={`header-${index}`} className="font-bold italic text-purple-700">
-              {match[1]}:
-            </strong>
-          );
-        }
+    return parts.map((part, index) => {
+      if (part.match(/^\*\*.*\*\*$/)) {
+        return <strong key={index}>{part.slice(2, -2)}</strong>;
+      } else if (part.match(/^\*.*\*$/)) {
+        return <em key={index}>{part.slice(1, -1)}</em>;
+      } else if (part.match(/^`.*`$/)) {
+        return <code key={index} className="bg-gray-100 px-1 py-0.5 rounded text-sm">{part.slice(1, -1)}</code>;
+      } else if (part.match(/^\[.*?\]\(.*?\)$/)) {
+        const match = part.match(/^\[(.*?)\]\((.*?)\)$/);
+        return (
+          <a key={index} href={match[2]} target="_blank" className="text-blue-600 hover:underline">
+            {match[1]}
+          </a>
+        );
       } else {
-        // Handle **text** in remaining parts
-        const boldParts = part.split(/(\*\*[^*]+\*\*)/g);
-        boldParts.forEach((boldPart, boldIndex) => {
-          if (boldPart.startsWith('**') && boldPart.endsWith('**') && boldPart.length > 4) {
-            const boldText = boldPart.slice(2, -2);
-            result.push(
-              <strong key={`bold-${index}-${boldIndex}`} className="font-bold text-blue-700">
-                {boldText}
-              </strong>
-            );
-          } else if (boldPart) {
-            result.push(boldPart);
-          }
-        });
+        return part.split('\n').map((line, lineIndex) => (
+          <span key={`${index}-${lineIndex}`}>
+            {lineIndex > 0 && <br />}
+            {line}
+          </span>
+        ));
       }
     });
-    
-    return result;
   };
 
-  // Custom typing component that supports HTML formatting
   const CustomTypingAnimation = ({ text, onComplete, speed = 50 }) => {
     const [displayedText, setDisplayedText] = useState('');
     const [currentIndex, setCurrentIndex] = useState(0);
-    
-    // Reset when text changes (new message)
-    useEffect(() => {
-      setDisplayedText('');
-      setCurrentIndex(0);
-    }, [text]);
-    
+
     useEffect(() => {
       if (currentIndex < text.length) {
         const timer = setTimeout(() => {
-          setDisplayedText(text.slice(0, currentIndex + 1));
-          setCurrentIndex(currentIndex + 1);
+          setDisplayedText(prev => prev + text[currentIndex]);
+          setCurrentIndex(prev => prev + 1);
         }, speed);
-        
+
         return () => clearTimeout(timer);
-      } else if (currentIndex > 0 && onComplete) {
-        // Only call onComplete if we actually typed something
+      } else if (onComplete) {
         onComplete();
       }
     }, [currentIndex, text, speed, onComplete]);
-    
-    // Convert current displayed text to HTML
-    const htmlContent = parseMarkdownToHTML(displayedText);
-    
+
     return (
-      <div 
-        style={{ whiteSpace: "pre-line" }}
-        dangerouslySetInnerHTML={{ __html: htmlContent }}
-      />
+      <div dangerouslySetInnerHTML={{ __html: parseMarkdownToHTML(displayedText) }} />
     );
   };
 
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-purple-100 h-[85vh] overflow-hidden">
-      
-      {/* User Info Popup */}
-      {showUserInfoPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4">
-            <h2 className="text-xl font-bold mb-4 text-center">
-              🎓 Thông tin người dùng
-            </h2>
-            <p className="text-sm text-gray-600 mb-4 text-center">
-              Vui lòng điền thông tin để bắt đầu trò chuyện với HUMG Chatbot
-            </p>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Số điện thoại hoặc Mã sinh viên *
-                </label>
-                <input
-                  type="text"
-                  placeholder="VD: 0123456789 hoặc SV001"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={tempUserInfo.mssv}
-                  onChange={(e) => setTempUserInfo({...tempUserInfo, mssv: e.target.value})}
+    <div className={`flex h-full ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      {/* Sidebar */}
+      <div className={`${sidebarOpen ? 'w-[260px]' : 'w-16'} ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-r flex flex-col transition-all duration-300`}>
+        {/* Sidebar Header */}
+        <div className={`p-4`}>
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className={`p-2 hover:${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            {sidebarOpen && (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={toggleDarkMode}
+                  className={`p-2 hover:${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
+                  title={isDarkMode ? 'Chuyển sang Light mode' : 'Chuyển sang Dark mode'}
+                >
+                  <FontAwesomeIcon icon={isDarkMode ? faSun : faMoon} className="text-sm" />
+                </button>
+                <button className={`p-2 hover:${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <FontAwesomeIcon icon={faSearch} className="text-sm" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar Content */}
+        {sidebarOpen && (
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
+            {/* New Chat Button */}
+            <div className="p-4">
+              <button
+                onClick={handleNewSession}
+                className="w-full flex items-center space-x-3 p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <FontAwesomeIcon icon={faPlus} className="text-sm" />
+                <span className="font-medium">Cuộc trò chuyện mới</span>
+              </button>
+            </div>
+
+            {/* Recent Chats */}
+            <div className="px-4">
+              <h3 className={`text-sm font-medium mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Gần đây</h3>
+              <div className="space-y-1">
+                {conversationHistory.map((conv, index) => (
+                  <button
+                    key={index}
+                    onClick={() => loadConversation(conv.session_id)}
+                    className={`w-full text-left p-3 rounded-lg transition-colors ${
+                      selectedSession === conv.session_id 
+                        ? (isDarkMode ? 'bg-gray-700 text-white' : 'bg-blue-50 text-blue-700')
+                        : (isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100')
+                    }`}
+                  >
+                    <div className="text-sm font-medium truncate">{conv.title || `Cuộc trò chuyện ${index + 1}`}</div>
+                    <div className={`text-xs truncate ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>{conv.last_message || 'Không có tin nhắn'}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sidebar Footer */}
+        <div className={`p-4`}>
+          {sidebarOpen && (
+            <button className={`w-full p-3 flex items-center space-x-3 rounded-lg transition-colors ${
+              isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'
+            }`}>
+              <FontAwesomeIcon icon={faCog} className="text-sm" />
+              <span className="text-sm">Cài đặt</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Main Chat Area */}
+      <div className={`flex-1 flex flex-col ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
+        {/* Chat Header - No border */}
+        <div className={`px-6 py-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} border-b`}>
+          <div className="flex items-center justify-between">
+            <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>HUMG Chatbot</h1>
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-medium">
+                {userInfo?.userName?.charAt(0) || 'U'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Messages Container - Centered */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide">
+          <div className="max-w-4xl mx-auto">
+            {dataChat.length <= 1 ? (
+              // Welcome screen
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FontAwesomeIcon icon={faUser} className="text-white text-xl" />
+                  </div>
+                  <h2 className={`text-2xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Xin chào {userInfo?.userName || 'bạn'}!
+                  </h2>
+                  <p className={`mb-6 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Tôi là trợ lý thông minh của HUMG. Hãy hỏi tôi bất cứ điều gì!</p>
+                  
+                  {/* Quick Questions with Action Buttons */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl mx-auto">
+                    {commonQuestions.map((question, index) => (
+                      <div key={index} className={`p-4 rounded-lg border transition-colors ${
+                        isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200'
+                      }`}>
+                        <div className={`text-sm font-medium mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{question}</div>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => {
+                              SetPromptInput(question);
+                              setTimeout(() => SendMessageChat(), 100);
+                            }}
+                            className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                          >
+                            Hỏi ngay
+                          </button>
+                          <button className="px-3 py-1 text-xs rounded transition-colors border hover:bg-gray-100">
+                            Chi tiết
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // Chat messages
+              <div 
+                ref={chatAreaRef}
+                className="py-4 space-y-6"
+                onScroll={handleScroll}
+              >
+                {dataChat.map((message, index) => (
+                  <div key={index} className="flex">
+                    {message[0] === "user" ? (
+                      // User message - Bo 4 góc
+                      <div className="flex-1 flex justify-end">
+                        <div className="max-w-[80%] bg-blue-600 text-white rounded-2xl px-4 py-3">
+                          <div className="text-sm">{message[1]}</div>
+                        </div>
+                      </div>
+                    ) : (
+                      // Bot message - Bo 4 góc
+                      <div className="flex-1 flex justify-start">
+                        <div className="flex space-x-3 max-w-[80%]">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${
+                            isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+                          }`}>
+                            <img src={robot_img} alt="Bot" className="w-6 h-6 rounded-full" />
+                          </div>
+                          <div className={`rounded-2xl px-4 py-3 border ${
+                            isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
+                          }`}>
+                            <div className={`text-sm whitespace-pre-wrap ${
+                              isDarkMode ? 'text-gray-100' : 'text-gray-900'
+                            }`}>
+                              {isGen && index === dataChat.length - 1 ? (
+                                <CustomTypingAnimation
+                                  text={message[1]}
+                                  onComplete={() => {
+                                    SetIsGen(false);
+                                    scrollToEnd();
+                                  }}
+                                />
+                              ) : (
+                                <div dangerouslySetInnerHTML={{ __html: parseMarkdownToHTML(message[1]) }} />
+                              )}
+                            </div>
+                            
+                            {/* Message Actions */}
+                            <div className={`flex items-center space-x-2 mt-3 pt-2 border-t ${
+                              isDarkMode ? 'border-gray-700' : 'border-gray-200'
+                            }`}>
+                              <button
+                                onClick={() => handleCopyMessage(index, message[1])}
+                                className={`p-1 transition-colors ${
+                                  isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
+                                }`}
+                                title="Sao chép"
+                              >
+                                <FontAwesomeIcon icon={faCopy} className="text-xs" />
+                              </button>
+                              <button
+                                onClick={() => handleThumbsUp(index, message[1])}
+                                className={`p-1 transition-colors ${
+                                  feedbackState[index] === 'up' 
+                                    ? 'text-green-600' 
+                                    : (isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600')
+                                }`}
+                                title="Hữu ích"
+                              >
+                                <FontAwesomeIcon icon={faThumbsUp} className="text-xs" />
+                              </button>
+                              <button
+                                onClick={() => handleThumbsDown(index, message[1])}
+                                className={`p-1 transition-colors ${
+                                  feedbackState[index] === 'down' 
+                                    ? 'text-red-600' 
+                                    : (isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600')
+                                }`}
+                                title="Không hữu ích"
+                              >
+                                <FontAwesomeIcon icon={faThumbsDown} className="text-xs" />
+                              </button>
+                              <button
+                                onClick={() => handleReadAloud(message[1])}
+                                className={`p-1 transition-colors ${
+                                  isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
+                                }`}
+                                title="Đọc to"
+                              >
+                                <FontAwesomeIcon icon={faVolumeHigh} className="text-xs" />
+                              </button>
+                              <button
+                                onClick={() => handleRetry(index)}
+                                className={`p-1 transition-colors ${
+                                  isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
+                                }`}
+                                title="Thử lại"
+                              >
+                                <FontAwesomeIcon icon={faRotateRight} className="text-xs" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {isLoading && (
+                  <div className="flex">
+                    <div className="flex space-x-3 max-w-[80%]">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 ${
+                        isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+                      }`}>
+                        <img src={robot_img} alt="Bot" className="w-6 h-6 rounded-full" />
+                      </div>
+                      <div className={`rounded-2xl px-4 py-3 border ${
+                        isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
+                      }`}>
+                        <ScaleLoader color="#3B82F6" height={20} width={3} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div ref={messagesEndRef} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Scroll to bottom button */}
+        {showScrollButton && (
+          <div className="absolute bottom-20 right-6">
+            <button
+              onClick={ScrollToEndChat}
+              className={`p-3 rounded-full shadow-lg border transition-shadow ${
+                isDarkMode ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' : 'bg-white border-gray-200 hover:shadow-xl'
+              }`}
+            >
+              <svg className={`w-5 h-5 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Input Section - Floating style */}
+        <div className="p-6">
+          <div className="max-w-4xl mx-auto">
+            {/* Source Selection - Subtle */}
+            <div className="mb-3 flex items-center space-x-2">
+              <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nguồn:</span>
+              <select
+                value={sourceData}
+                onChange={(e) => SetSourceData(e.target.value)}
+                className={`text-xs rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 border-gray-600 text-gray-300' 
+                    : 'bg-white border-gray-300 text-gray-700'
+                }`}
+              >
+                <option value="nttu">HUMG</option>
+                <option value="moet">Bộ GD&ĐT</option>
+                <option value="tuyensinh">Tuyển sinh</option>
+              </select>
+            </div>
+
+            {/* Input Form - Floating style */}
+            <div className={`rounded-2xl p-4 shadow-lg border ${
+              isDarkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
+            }`}>
+              {/* Main Input Area */}
+              <div className="mb-3">
+                <textarea
+                  value={promptInput}
+                  onChange={onChangeHandler}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Hỏi HUMG Chatbot..."
+                  className={`w-full resize-none border-none outline-none text-sm ${
+                    isDarkMode ? 'bg-transparent text-white placeholder-gray-400' : 'bg-transparent text-gray-900 placeholder-gray-500'
+                  }`}
+                  rows="1"
+                  style={{ minHeight: '24px', maxHeight: '120px' }}
                 />
               </div>
               
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Họ và tên *
-                </label>
-                <input
-                  type="text"
-                  placeholder="VD: Nguyễn Văn A"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={tempUserInfo.userName}
-                  onChange={(e) => setTempUserInfo({...tempUserInfo, userName: e.target.value})}
-                />
+              {/* Action Buttons Below */}
+              <div className={`flex items-center justify-between pt-3 border-t ${
+                isDarkMode ? 'border-gray-700' : 'border-gray-200'
+              }`}>
+                <div className="flex items-center space-x-4">
+                  <button className={`flex items-center space-x-2 transition-colors ${
+                    isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
+                  }`}>
+                    <FontAwesomeIcon icon={faPlus} className="text-sm" />
+                    <span className="text-xs">Thêm</span>
+                  </button>
+                  <button className={`flex items-center space-x-2 transition-colors ${
+                    isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
+                  }`}>
+                    <FontAwesomeIcon icon={faMagnifyingGlass} className="text-sm" />
+                    <span className="text-xs">Tìm kiếm</span>
+                  </button>
+                  <button className={`flex items-center space-x-2 transition-colors ${
+                    isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
+                  }`}>
+                    <FontAwesomeIcon icon={faImage} className="text-sm" />
+                    <span className="text-xs">Hình ảnh</span>
+                  </button>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <button className={`p-2 transition-colors ${
+                    isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
+                  }`}>
+                    <FontAwesomeIcon icon={faMicrophone} className="text-sm" />
+                  </button>
+                  {/* Bỏ icon gửi như yêu cầu */}
+                </div>
               </div>
             </div>
-            
-            <div className="flex gap-3 mt-6">
+          </div>
+        </div>
+      </div>
+
+      {/* User Info Popup */}
+      {showUserInfoPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`rounded-lg p-6 max-w-md w-full mx-4 border ${
+            isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+          }`}>
+            <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Thông tin người dùng</h3>
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="MSSV"
+                value={tempUserInfo.mssv}
+                onChange={(e) => setTempUserInfo({...tempUserInfo, mssv: e.target.value})}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  isDarkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
+              />
+              <input
+                type="text"
+                placeholder="Tên người dùng"
+                value={tempUserInfo.userName}
+                onChange={(e) => setTempUserInfo({...tempUserInfo, userName: e.target.value})}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  isDarkMode 
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                }`}
+              />
               <button
                 onClick={handleUserInfoSubmit}
-                className="flex-1 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors"
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Bắt đầu trò chuyện
+                Xác nhận
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* Main Layout with 3 columns: Left Sidebar, Chat Area, Right Sidebar */}
-      <div className="h-full grid grid-cols-1 lg:grid-cols-12 gap-3 p-3 mt-4">
-        
-        <div className="hidden lg:block lg:col-span-2">
-          <div className="bg-gray-50 text-base-content rounded-2xl p-4 h-[calc(100vh-10rem)] overflow-auto sticky top-20">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="font-bold text-sm">
-                📝 Lịch sử trò chuyện
-              </h2>
-              <div className="flex gap-1">
-                {userInfo && (
-                  <button
-                    onClick={fetchConversationHistory}
-                    disabled={isLoadingConversations}
-                    className="btn btn-ghost btn-xs text-blue-500 hover:bg-blue-100 tooltip"
-                    data-tip="Làm mới lịch sử"
-                  >
-                    <FontAwesomeIcon 
-                      icon={faRotateRight} 
-                      className={`w-3 h-3 ${isLoadingConversations ? 'animate-spin' : ''}`} 
-                    />
-                  </button>
-                )}
-                {conversationHistory.length > 0 && (
-                  <button
-                    onClick={clearChatHistory}
-                    className="btn btn-ghost btn-xs text-red-500 hover:bg-red-100 tooltip"
-                    data-tip="Bắt đầu cuộc trò chuyện mới"
-                  >
-                    <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {!userInfo ? (
-              <div className="text-center text-gray-500 text-xs py-4">
-                <p>Vui lòng đăng nhập để xem lịch sử trò chuyện</p>
-              </div>
-            ) : isLoadingConversations ? (
-              <div className="text-center text-gray-500 text-xs py-4">
-                <ScaleLoader
-                  color="#6b7280"
-                  loading={true}
-                  height={8}
-                  width={2}
-                  aria-label="Loading Conversations"
-                />
-                <p className="mt-2">Đang tải...</p>
-              </div>
-            ) : conversationHistory.length > 0 ? (
-              <ul className="menu text-sm p-0">
-                {conversationHistory.map((conversation, i) => (
-                  <li
-                    key={conversation.session_id}
-                    className="max-h-12 py-1"
-                    onClick={() => loadConversation(conversation.session_id)}
-                  >
-                    <a
-                      className={`text-[14px] hover:bg-gray-200 font-medium rounded-md cursor-pointer transition-colors ${
-                        conversation.session_id === sessionId 
-                          ? 'bg-blue-100 text-blue-700' 
-                          : ''
-                      }`}
-                      title={conversation.title}
-                    >
-                      <div className="flex items-center gap-2 w-full">
-                        <FontAwesomeIcon icon={faMessage} className="w-3 h-3 flex-shrink-0" />
-                        <span className="truncate">
-                          {conversation.title.length > 25 
-                            ? conversation.title.substring(0, 25) + "..." 
-                            : conversation.title}
-                        </span>
-                      </div>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="text-center text-gray-500 text-xs py-4">
-                <p>Chưa có cuộc trò chuyện nào</p>
-                <p className="mt-1">Hãy bắt đầu chat để tạo lịch sử!</p>
-              </div>
-            )}
-
-            {/* Fallback: Recent questions from current session */}
-            {userInfo && chatHistory.length > 0 && (
-              <>
-                <div className="divider my-2"></div>
-                <div className="mb-2">
-                  <h3 className="font-bold text-xs text-gray-600">
-                    💭 Câu hỏi gần đây
-                  </h3>
-                </div>
-                <ul className="menu text-sm p-0">
-                  {chatHistory.slice(0, 3).map((question, i) => (
-                    <li
-                      key={`recent-${i}`}
-                      className="max-h-12 py-1"
-                      onClick={() => {
-                        if (promptInput === "" && !isLoading) {
-                          SetPromptInput(question);
-                        }
-                      }}
-                    >
-                      <a
-                        className={
-                          "text-[12px] hover:bg-gray-200 font-medium rounded-md opacity-70 " +
-                          (promptInput === "" && !isLoading
-                            ? "cursor-pointer"
-                            : "cursor-not-allowed opacity-50")
-                        }
-                        title={question}
-                      >
-                        {question.length > 20 ? question.substring(0, 20) + "..." : question}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Main Chat Area */}
-        <div className="col-span-1 lg:col-span-8">
-          <div className="relative border-2 border-blue-300 bg-gradient-to-r from-red-50 to-sky-50 drop-shadow-2xl h-[calc(100vh-10rem)] rounded-3xl p-3 max-w-full overflow-hidden">
-            
-            {/* Header with user info and controls */}
-            <div className="flex justify-between items-center mb-3 p-2 bg-white rounded-2xl shadow-md">
-              <div className="flex items-center gap-3">
-                <div className="avatar">
-                  <div className="w-8 rounded-full border-2 border-blue-500">
-                    <img src={robot_img} alt="Bot Avatar" />
-                  </div>
-                </div>
-                <div>
-                  <h1 className="font-bold text-lg">HUMG Chatbot</h1>
-                  {userInfo && (
-                    <div className="text-sm text-gray-600">
-                      Xin chào, {userInfo.userName}!
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex gap-2">
-                {userInfo && (
-                  <button
-                    onClick={handleNewSession}
-                    className="btn btn-ghost btn-sm tooltip"
-                    data-tip="Đăng xuất / Phiên mới"
-                  >
-                    <FontAwesomeIcon icon={faUser} />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Reference Modal */}
-            <input type="checkbox" id="my_modal_6" className="modal-toggle" />
-            <div className="modal" role="dialog">
-              <div className="modal-box">
-                <h3 className="font-bold text-lg">📖 Tài liệu tham khảo</h3>
-                <p className="py-2 break-words">
-                  <b>Nội dung: </b>
-                  {reference.content}
-                </p>
-                <p className="py-2 break-words">
-                  <b>Nguồn: </b>
-                  <a href={reference.url} target="_blank">
-                    {reference.url}
-                  </a>
-                </p>
-                <div className="modal-action">
-                  <label htmlFor="my_modal_6" className="btn btn-error">
-                    ĐÓNG
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div
-              id="chat-area"
-              ref={chatAreaRef}
-              onScroll={handleScroll}
-              className="mt-5 text-sm scrollbar-thin scrollbar-thumb-gray-300 bg-white scrollbar-thumb-rounded-full scrollbar-track-rounded-full rounded-3xl border-2 p-3 w-full overflow-auto scroll-y-auto h-[calc(100%-8rem)]"
-            >
-              {dataChat.map((dataMessages, i) =>
-                  dataMessages[0] === "start" ? (
-                      <div className="chat chat-start drop-shadow-md" key={`start-${i}`}>
-                          <div className="chat-image avatar">
-                              <div className="w-10 rounded-full border-2 border-blue-500">
-                                  <img className="scale-150" src={robot_img} />
-                              </div>
-                          </div>
-                          <div className="w-full">
-                              <div className="chat-bubble chat-bubble-info colo break-words">
-                                  {isGen && i === dataChat.length - 1 ? (
-                                      <CustomTypingAnimation
-                                          text={dataMessages[1][0]}
-                                          onComplete={() => SetIsGen(false)}
-                                          speed={50}
-                                      />
-                                  ) : (
-                                      <div style={{ whiteSpace: "pre-line" }}>
-                                          {parseMarkdownToJSX(dataMessages[1][0])}
-                                      </div>
-                                  )}
-                                  {dataMessages[1][1] && dataMessages[1][1].length > 0 && (
-                                      <>
-                                          <div className="divider m-0"></div>
-                                          <p className="font-semibold text-xs">
-                                              Tham khảo:{" "}
-                                              {dataMessages[1][1].map((source, j) => (
-                                                  <label
-                                                      htmlFor="my_modal_6"
-                                                      className="kbd kbd-xs mr-1 hover:bg-sky-300 cursor-pointer"
-                                                      onClick={() =>
-                                                          handleReferenceClick(source, dataMessages[1][2])
-                                                      }
-                                                      key={`source-${j}`}
-                                                  >
-                                                      {dataMessages[1][2] === "wiki"
-                                                          ? source.metadata.title
-                                                          : source.metadata.page === undefined
-                                                          ? "Sổ tay sinh viên 2023"
-                                                          : "Trang " + source.metadata.page + " (sổ tay SV)"}
-                                                  </label>
-                                              ))}
-                                          </p>
-                                      </>
-                                  )}
-                              </div>
-                              
-                              {/* Feedback buttons - chỉ hiển thị cho tin nhắn của chatbot (không phải tin nhắn chào đầu tiên) */}
-                              {i > 0 && (
-                                  <div className="flex gap-1 mt-2 ml-12">
-                                      <button
-                                          onClick={() => handleCopyMessage(i, dataMessages[1][0])}
-                                          className="btn btn-ghost btn-xs hover:bg-gray-200 tooltip"
-                                          data-tip="Sao chép"
-                                      >
-                                          <FontAwesomeIcon icon={faCopy} className="w-3 h-3" />
-                                      </button>
-                                      
-                                      <button
-                                          onClick={() => handleThumbsUp(i, dataMessages[1][0])}
-                                          disabled={feedbackState[i]?.hasSubmitted}
-                                          className={`btn btn-ghost btn-xs tooltip ${
-                                              feedbackState[i]?.hasSubmitted 
-                                                  ? feedbackState[i]?.thumbsUp 
-                                                      ? 'text-green-600 bg-green-50 cursor-not-allowed' 
-                                                      : 'text-gray-400 cursor-not-allowed'
-                                                  : 'hover:bg-green-100'
-                                          }`}
-                                          data-tip={feedbackState[i]?.hasSubmitted ? "Đã đánh giá" : "Phản hồi tốt"}
-                                      >
-                                          <FontAwesomeIcon icon={faThumbsUp} className="w-3 h-3" />
-                                      </button>
-                                      
-                                      <button
-                                          onClick={() => handleThumbsDown(i, dataMessages[1][0])}
-                                          disabled={feedbackState[i]?.hasSubmitted}
-                                          className={`btn btn-ghost btn-xs tooltip ${
-                                              feedbackState[i]?.hasSubmitted 
-                                                  ? feedbackState[i]?.thumbsDown 
-                                                      ? 'text-red-600 bg-red-50 cursor-not-allowed' 
-                                                      : 'text-gray-400 cursor-not-allowed'
-                                                  : 'hover:bg-red-100'
-                                          }`}
-                                          data-tip={feedbackState[i]?.hasSubmitted ? "Đã đánh giá" : "Phản hồi không tốt"}
-                                      >
-                                          <FontAwesomeIcon icon={faThumbsDown} className="w-3 h-3" />
-                                      </button>
-                                      
-                                      <button
-                                          onClick={() => handleReadAloud(dataMessages[1][0])}
-                                          className="btn btn-ghost btn-xs hover:bg-blue-100 tooltip"
-                                          data-tip="Đọc to"
-                                      >
-                                          <FontAwesomeIcon icon={faVolumeHigh} className="w-3 h-3" />
-                                      </button>
-                                      
-                                      <button
-                                          onClick={() => handleRetry(i)}
-                                          className="btn btn-ghost btn-xs hover:bg-orange-100 tooltip"
-                                          data-tip="Thử lại"
-                                      >
-                                          <FontAwesomeIcon icon={faRotateRight} className="w-3 h-3" />
-                                      </button>
-                                  </div>
-                              )}
-                          </div>
-                      </div>
-                  ) : (
-                      <div className="chat chat-end" key={`end-${i}`}>
-                          <div className="chat-bubble shadow-xl chat-bubble-primary  text-white">
-                              {dataMessages[1][0]}
-                          </div>
-                      </div>
-                  )
-              )}
-
-              {isLoading ? (
-                <div className="chat chat-start">
-                  <div className="chat-image avatar">
-                    <div className="w-10 rounded-full border-2 border-blue-500">
-                      <img src={robot_img} />
-                    </div>
-                  </div>
-                  <div className="chat-bubble chat-bubble-info">
-                    <ScaleLoader
-                      color="#000000"
-                      loading={true}
-                      height={10}
-                      width={10}
-                      aria-label="Loading Spinner"
-                      data-testid="loader"
-                    />
-                    <p className="text-xs font-medium">{timeOfRequest + "/60s"}</p>
-                  </div>
-                </div>
-              ) : (
-                ""
-              )}
-
-              {isLoadingChatHistory ? (
-                <div className="chat chat-start">
-                  <div className="chat-image avatar">
-                    <div className="w-10 rounded-full border-2 border-blue-500">
-                      <img src={robot_img} />
-                    </div>
-                  </div>
-                  <div className="chat-bubble chat-bubble-info">
-                    <ScaleLoader
-                      color="#000000"
-                      loading={true}
-                      height={10}
-                      width={10}
-                      aria-label="Loading Chat History"
-                      data-testid="loader"
-                    />
-                    <p className="text-xs font-medium">Đang tải lịch sử chat...</p>
-                  </div>
-                </div>
-              ) : (
-                ""
-              )}
-              <div ref={messagesEndRef} />
-              
-              {/* Nút scroll to bottom */}
-              {showScrollButton && (
-                <div className="absolute bottom-20 right-4">
-                  <button
-                    onClick={ScrollToEndChat}
-                    className="btn btn-circle btn-primary btn-sm shadow-lg hover:shadow-xl transition-all duration-200"
-                    title="Cuộn xuống cuối"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              )}
-              
-              <div className="absolute bottom-[0rem] w-[calc(100%-1.5rem)] grid">
-                {/* Nút xóa lịch sử cho mobile */}
-                {chatHistory.length > 0 && (
-                  <div className="lg:hidden mb-2 flex justify-end">
-                    <button
-                      onClick={clearChatHistory}
-                      className="btn btn-ghost btn-xs text-red-500 hover:bg-red-100 tooltip"
-                      data-tip="Bắt đầu cuộc trò chuyện mới"
-                    >
-                      <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
-                      <span className="ml-1 text-xs">Cuộc trò chuyện mới</span>
-                    </button>
-                  </div>
-                )}
-                
-                <input
-                  type="text"
-                  placeholder={userInfo ? "Nhập câu hỏi tại đây..." : "Vui lòng đăng nhập để chat..."}
-                  className="mr-1 shadow-xl border-2 focus:outline-none px-2 rounded-2xl input-primary col-start-1 col-end-11"
-                  onChange={onChangeHandler}
-                  onKeyDown={handleKeyDown}
-                  disabled={isGen || !userInfo || isLoadingChatHistory}
-                  value={promptInput}
-                />
-
-                <button
-                  disabled={isGen || !userInfo || isLoadingChatHistory}
-                  onClick={() => SendMessageChat()}
-                  className="drop-shadow-md rounded-2xl col-start-11 col-end-12 btn btn-active btn-primary btn-square bg-gradient-to-tl from-transparent via-blue-600 to-indigo-500"
-                >
-                  <svg
-                    stroke="currentColor"
-                    fill="none"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                    color="white"
-                    height="15px"
-                    width="15px"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                  </svg>
-                </button>
-                <div className="text-xs col-start-1 col-end-12 text-justify p-1 space-y-1">
-                  <p>
-                    <b>Lưu ý: </b>Mô hình có thể đưa ra câu trả lời không chính xác ở
-                    một số trường hợp, vì vậy hãy luôn kiểm chứng thông tin bạn nhé!
-                  </p>
-                  <p className={`text-xs ${
-                    storageStatus === 'available' ? 'text-green-600' : 
-                    storageStatus === 'limited' ? 'text-yellow-600' : 'text-red-600'
-                  }`}>
-                    <b>Lưu trữ: </b>
-                    {storageStatus === 'available' && '✅ Lịch sử chat được lưu tự động'}
-                    {storageStatus === 'limited' && '⚠️ Lịch sử chỉ lưu trong phiên hiện tại'}
-                    {storageStatus === 'unavailable' && '❌ Không thể lưu lịch sử chat'}
-                    {storageStatus === 'checking' && '🔄 Đang kiểm tra...'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Sidebar - Common Questions (Desktop only) */}
-        <div className="hidden lg:block lg:col-span-2">
-          <div className="bg-gray-50 text-base-content rounded-2xl p-4 h-[calc(100vh-10rem)] overflow-auto sticky top-20">
-            <div className="mb-2">
-              <h2 className="font-bold text-sm bg-clip-text will-change-auto ">
-                💡 Câu hỏi gợi ý
-              </h2>
-            </div>
-            <ul className="menu text-sm p-0">
-              {commonQuestions.map((question, i) => (
-                <li
-                  key={i}
-                  className="max-h-16 py-1"
-                  onClick={() => {
-                    if (userInfo && promptInput === "" && !isLoading) {
-                      SetPromptInput(question);
-                    } else if (!userInfo) {
-                      setShowUserInfoPopup(true);
-                    }
-                  }}
-                >
-                  <a
-                    className={
-                      "text-xs hover:bg-gray-200 font-medium rounded-md  cursor-pointer transition-colors p-2" +
-                      (isLoading || !userInfo
-                        ? " opacity-50 cursor-not-allowed"
-                        : "")
-                    }
-                    title={question}
-                  >
-                    {question.length > 40 ? question.substring(0, 40) + "..." : question}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        
-      </div>
     </div>
   );
 }
+
 export default ChatBot;

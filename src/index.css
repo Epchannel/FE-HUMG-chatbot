@@ -25,17 +25,22 @@
 
   .chatbot-hero-content h1 {
     @apply text-5xl mb-2 leading-tight; /* `leading-tight` điều chỉnh giãn dòng */
-}
-
+  }
 
   .get-started-btn {
     @apply px-8 py-4 mt-2; /* Tăng padding ngang (px) và padding dọc (py) */
     font-size: 20px; /* Điều chỉnh font-size nếu cần */
   }
-  
 
+  /* Hide scrollbar for elements with scrollbar-hide class */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* Internet Explorer 10+ */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;  /* Safari and Chrome */
+  }
 }
-
 
 @tailwind components;
 @tailwind utilities;

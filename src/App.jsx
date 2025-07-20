@@ -4,7 +4,7 @@ import HomePage from "./pages/HomePage";
 import ChatBot from "./components/ChatBot";
 import FAQPage from "./pages/FAQPage";
 import IssuePage from "./pages/IssuePage";
-import { HashRouter, Routes, Route } from "react-router-dom"; // Thay đổi từ BrowserRouter thành HashRouter
+import { HashRouter, Routes, Route } from "react-router-dom";
 import ScaleLoader from "react-spinners/ScaleLoader";
 
 function App() {
@@ -12,15 +12,17 @@ function App() {
   const [currentPage, SetCurrentPage] = useState("Home");
 
   return (
-    <HashRouter> {/* Thay đổi từ BrowserRouter thành HashRouter */}
-      <div className="overflow-hidden">
+    <HashRouter>
+      <div className="flex flex-col h-screen bg-gray-50">
         <NavBar />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="chat" element={<ChatBot />} />
-          <Route path="issue" element={<IssuePage />} />
-          <Route path="faq" element={<FAQPage />} />
-        </Routes>
+        <main className="flex-1 overflow-hidden">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="chat" element={<ChatBot />} />
+            <Route path="issue" element={<IssuePage />} />
+            <Route path="faq" element={<FAQPage />} />
+          </Routes>
+        </main>
       </div>
     </HashRouter>
   );
