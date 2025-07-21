@@ -1,7 +1,6 @@
 // import avatar from "../assets/avatar.jpg";
 import robot_img from "../assets/robot_image.webp";
 import { useState, useRef, useEffect, useCallback } from "react";
-import ScaleLoader from "react-spinners/ScaleLoader";
 import { TypeAnimation } from "react-type-animation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMessage, faCopy, faThumbsUp, faThumbsDown } from "@fortawesome/free-regular-svg-icons";
@@ -97,7 +96,7 @@ const getStoredChatData = () => {
 };
 
 // API endpoints
-const API_BASE_URL = "http://34.87.17.241:9999";
+const API_BASE_URL = "http://34.142.128.196:9999";
 const CHATBOT_ENDPOINT = `${API_BASE_URL}/chatbot_proactive`;
 const GET_CONV_TITLE_ENDPOINT = `${API_BASE_URL}/get_conv_title`;
 const GET_CHAT_CONV_ENDPOINT = `${API_BASE_URL}/get_chat_conv`;
@@ -302,20 +301,24 @@ function ChatBot() {
 
     setIsLoadingConversations(true);
     try {
+      const formData = new URLSearchParams();
+      formData.append('mssv', userInfo.mssv);
+      
       const response = await fetch(GET_CONV_TITLE_ENDPOINT, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          mssv: userInfo.mssv
-        })
+        body: formData.toString()
       });
 
       if (response.ok) {
         const data = await response.json();
         console.log('📚 Đã tải lịch sử hội thoại:', data);
-        setConversationHistory(data.conversations || []);
+        // Xử lý đúng format data từ API
+        const conversations = data.data?.data || [];
+        setConversationHistory(conversations);
       } else {
         console.log('❌ Lỗi khi tải lịch sử hội thoại:', response.status);
       }
@@ -345,40 +348,40 @@ function ChatBot() {
 
     setIsLoadingChatHistory(true);
     try {
+      const formData = new URLSearchParams();
+      formData.append('mssv', userInfo.mssv);
+      formData.append('sessionId', sessionIdToLoad);
+
       const response = await fetch(GET_CHAT_CONV_ENDPOINT, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          mssv: userInfo.mssv,
-          session_id: sessionIdToLoad
-        })
+        body: formData.toString()
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log('📖 Đã tải hội thoại:', data);
-        
-        if (data.messages && data.messages.length > 0) {
-          const formattedMessages = data.messages.map(msg => [
-            msg.role === 'user' ? 'user' : 'bot',
-            msg.content,
-            msg.timestamp
-          ]);
-          
+        // data.data là mảng các object { human, ai }
+        if (Array.isArray(data.data) && data.data.length > 0) {
+          // Chuyển thành format dataChat: [["user", ...], ["bot", ...], ...]
+          const formattedMessages = [];
+          data.data.forEach(msg => {
+            if (msg.human) formattedMessages.push(["user", msg.human]);
+            if (msg.ai) formattedMessages.push(["bot", msg.ai]);
+          });
           SetDataChat(formattedMessages);
           setSessionId(sessionIdToLoad);
           updateUrlWithSessionId(sessionIdToLoad);
-          console.log('✅ Đã tải hội thoại thành công');
         } else {
-          console.log('⚠️ Hội thoại trống hoặc không tồn tại');
+          SetDataChat([["bot", "Không có tin nhắn trong hội thoại này."]]);
         }
       } else {
-        console.log('❌ Lỗi khi tải hội thoại:', response.status);
+        SetDataChat([["bot", "Lỗi khi tải hội thoại."]]);
       }
     } catch (error) {
-      console.log('❌ Lỗi network khi tải hội thoại:', error);
+      SetDataChat([["bot", "Lỗi kết nối khi tải hội thoại."]]);
     } finally {
       setIsLoadingChatHistory(false);
     }
@@ -389,7 +392,7 @@ function ChatBot() {
       console.log('🔄 Đang ở cùng phiên chat');
       return;
     }
-
+    setSelectedSession(sessionIdToLoad);
     console.log('📂 Đang tải hội thoại:', sessionIdToLoad);
     await fetchChatConversation(sessionIdToLoad);
   };
@@ -399,6 +402,13 @@ function ChatBot() {
     const sessionFromUrl = getSessionIdFromUrl();
     if (sessionFromUrl && userInfo?.mssv) {
       loadConversation(sessionFromUrl);
+    }
+  }, [userInfo]);
+
+  // Load conversation history when user info is available
+  useEffect(() => {
+    if (userInfo?.mssv) {
+      fetchConversationHistory();
     }
   }, [userInfo]);
 
@@ -415,28 +425,26 @@ function ChatBot() {
     SetIsGen(true);
     
     try {
-      const requestData = {
-        message: userMessage,
-        source: sourceData,
-        session_id: sessionId,
-        user_info: userInfo || tempUserInfo
-      };
-
-      console.log('📤 Đang gửi tin nhắn:', requestData);
-
+      const formData = new URLSearchParams();
+      formData.append("inputText", userMessage);
+      formData.append("idRequest", sessionId);
+      formData.append("mssv", userInfo?.mssv);
+      formData.append("userName", userInfo?.userName);
+      formData.append("nameBot", "DieuLinh");
+      
       const response = await fetch(CHATBOT_ENDPOINT, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json'
         },
-        body: JSON.stringify(requestData)
+        body: formData.toString(),
       });
+      
 
       if (response.ok) {
         const data = await response.json();
-        console.log('📥 Phản hồi từ chatbot:', data);
-        
-        const botResponse = data.response || "Xin lỗi, tôi không thể xử lý yêu cầu của bạn.";
+        const botResponse = data.content || "Xin lỗi, tôi không thể xử lý yêu cầu của bạn.";
         
         SetDataChat(prev => [...prev, ["bot", botResponse]]);
         SetChatHistory(prev => [...prev, { user: userMessage, bot: botResponse }]);
@@ -665,36 +673,50 @@ function ChatBot() {
 
         {/* Sidebar Content */}
         {sidebarOpen && (
-          <div className="flex-1 overflow-y-auto scrollbar-hide">
+          <div className="flex-1 overflow-y-auto scrollbar-hide ">
             {/* New Chat Button */}
             <div className="p-4">
               <button
                 onClick={handleNewSession}
-                className="w-full flex items-center space-x-3 p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="w-full flex items-center justify-center space-x-3 p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 border-0 font-medium text-sm"
               >
-                <FontAwesomeIcon icon={faPlus} className="text-sm" />
-                <span className="font-medium">Cuộc trò chuyện mới</span>
+                <div className="w-6 h-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                  <FontAwesomeIcon icon={faPlus} className="text-xs" />
+                </div>
+                <span>Cuộc trò chuyện mới</span>
               </button>
             </div>
 
             {/* Recent Chats */}
             <div className="px-4">
               <h3 className={`text-sm font-medium mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Gần đây</h3>
-              <div className="space-y-1">
-                {conversationHistory.map((conv, index) => (
-                  <button
-                    key={index}
-                    onClick={() => loadConversation(conv.session_id)}
-                    className={`w-full text-left p-3 rounded-lg transition-colors ${
-                      selectedSession === conv.session_id 
-                        ? (isDarkMode ? 'bg-gray-700 text-white' : 'bg-blue-50 text-blue-700')
-                        : (isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100')
-                    }`}
-                  >
-                    <div className="text-sm font-medium truncate">{conv.title || `Cuộc trò chuyện ${index + 1}`}</div>
-                    <div className={`text-xs truncate ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>{conv.last_message || 'Không có tin nhắn'}</div>
-                  </button>
-                ))}
+              <div className="space-y-2">
+                {conversationHistory.length === 0 ? (
+                  <div className={`text-center py-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <div className="w-8 h-8 mx-auto mb-2 opacity-50">
+                      <FontAwesomeIcon icon={faMessage} className="w-full h-full" />
+                    </div>
+                    <p className="text-xs">Chưa có cuộc trò chuyện nào</p>
+                  </div>
+                ) : (
+                  conversationHistory.map((conv, index) => (
+                    <button
+                      key={index}
+                      onClick={() => loadConversation(conv.session_id)}
+                      className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
+                        selectedSession === conv.session_id 
+                          ? (isDarkMode ? 'bg-blue-600 text-white shadow-lg' : 'bg-blue-50 text-blue-700')
+                          : (isDarkMode ? 'text-gray-300 hover:bg-gray-700 hover:shadow-md' : 'text-gray-700 hover:bg-gray-50 hover:shadow-sm')
+                      }`}
+                      title={conv.title || `Cuộc trò chuyện ${index + 1}`}
+                      style={{border: 'none'}}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{conv.title || `Cuộc trò chuyện ${index + 1}`}</div>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -729,11 +751,11 @@ function ChatBot() {
 
         {/* Messages Container - Centered */}
         <div className="flex-1 overflow-y-auto scrollbar-hide">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto px-4">
             {dataChat.length <= 1 ? (
               // Welcome screen
               <div className="flex items-center justify-center h-full">
-                <div className="text-center">
+                <div className="text-center mt-6">
                   <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                     <FontAwesomeIcon icon={faUser} className="text-white text-xl" />
                   </div>
@@ -759,9 +781,6 @@ function ChatBot() {
                           >
                             Hỏi ngay
                           </button>
-                          <button className="px-3 py-1 text-xs rounded transition-colors border hover:bg-gray-100">
-                            Chi tiết
-                          </button>
                         </div>
                       </div>
                     ))}
@@ -780,8 +799,8 @@ function ChatBot() {
                     {message[0] === "user" ? (
                       // User message - Bo 4 góc
                       <div className="flex-1 flex justify-end">
-                        <div className="max-w-[80%] bg-blue-600 text-white rounded-2xl px-4 py-3">
-                          <div className="text-sm">{message[1]}</div>
+                        <div className="max-w-[80%] bg-blue-600 text-white rounded-2xl px-4 py-3 break-words" style={{wordBreak: 'break-word'}}>
+                          <div className="text-sm break-words" style={{wordBreak: 'break-word'}}>{message[1]}</div>
                         </div>
                       </div>
                     ) : (
@@ -795,10 +814,10 @@ function ChatBot() {
                           </div>
                           <div className={`rounded-2xl px-4 py-3 border ${
                             isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
-                          }`}>
+                          } break-words`} style={{wordBreak: 'break-word'}}>
                             <div className={`text-sm whitespace-pre-wrap ${
                               isDarkMode ? 'text-gray-100' : 'text-gray-900'
-                            }`}>
+                            } break-words`} style={{wordBreak: 'break-word'}}>
                               {isGen && index === dataChat.length - 1 ? (
                                 <CustomTypingAnimation
                                   text={message[1]}
@@ -884,7 +903,17 @@ function ChatBot() {
                       <div className={`rounded-2xl px-4 py-3 border ${
                         isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
                       }`}>
-                        <ScaleLoader color="#3B82F6" height={20} width={3} />
+                        <div className="flex space-x-1">
+                          <div className={`w-2 h-2 rounded-full animate-bounce ${
+                            isDarkMode ? 'bg-gray-400' : 'bg-gray-500'
+                          }`} style={{ animationDelay: '0ms' }}></div>
+                          <div className={`w-2 h-2 rounded-full animate-bounce ${
+                            isDarkMode ? 'bg-gray-400' : 'bg-gray-500'
+                          }`} style={{ animationDelay: '150ms' }}></div>
+                          <div className={`w-2 h-2 rounded-full animate-bounce ${
+                            isDarkMode ? 'bg-gray-400' : 'bg-gray-500'
+                          }`} style={{ animationDelay: '300ms' }}></div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -916,7 +945,7 @@ function ChatBot() {
         <div className="p-6">
           <div className="max-w-4xl mx-auto">
             {/* Source Selection - Subtle */}
-            <div className="mb-3 flex items-center space-x-2">
+            {/* <div className="mb-3 flex items-center space-x-2">
               <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Nguồn:</span>
               <select
                 value={sourceData}
@@ -931,7 +960,7 @@ function ChatBot() {
                 <option value="moet">Bộ GD&ĐT</option>
                 <option value="tuyensinh">Tuyển sinh</option>
               </select>
-            </div>
+            </div> */}
 
             {/* Input Form - Floating style */}
             <div className={`rounded-2xl p-4 shadow-lg border ${
