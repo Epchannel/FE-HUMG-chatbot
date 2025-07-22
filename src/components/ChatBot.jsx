@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { TypeAnimation } from "react-type-animation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMessage, faCopy, faThumbsUp, faThumbsDown } from "@fortawesome/free-regular-svg-icons";
-import { faVolumeHigh, faRotateRight, faTrash, faUser, faPlus, faSearch, faCog, faMicrophone, faImage, faMagnifyingGlass, faSun, faMoon } from "@fortawesome/free-solid-svg-icons";
+import { faVolumeHigh, faRotateRight, faTrash, faUser, faPlus,   faMicrophone, faImage, faMagnifyingGlass, faSun, faMoon, faBars, faPenToSquare } from "@fortawesome/free-solid-svg-icons";
+import SidebarMenu from "./SidebarMenu";
 
 // Kiểm tra localStorage có khả dụng không
 const isLocalStorageAvailable = () => {
@@ -68,13 +69,11 @@ const removeStorageItem = (key) => {
   }
 };
 
-// Hàm để lấy dữ liệu từ storage
 const getStoredChatData = () => {
   try {
     const stored = getStorageItem('humg-chatbot-data');
     if (stored) {
       const parsed = JSON.parse(stored);
-      console.log('Đã khôi phục dữ liệu chat từ storage');
       return {
         dataChat: parsed.dataChat || [["start", ["Xin chào! Đây là HUMG Chatbot, trợ lý đắc lực dành cho bạn! Bạn muốn tìm kiếm thông tin về những gì? Đừng quên chọn nguồn tham khảo phù hợp để mình có thể giúp bạn tìm kiếm thông tin chính xác nhất nha. 😄", null]]],
         chatHistory: parsed.chatHistory || [],
@@ -110,7 +109,6 @@ function ChatBot() {
   const messagesEndRef = useRef(null);
   const [timeOfRequest, SetTimeOfRequest] = useState(0);
   let [promptInput, SetPromptInput] = useState("");
-  let [sourceData, SetSourceData] = useState("nttu");
   
   // Dark mode state
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -154,6 +152,7 @@ function ChatBot() {
   const [storageStatus, setStorageStatus] = useState('checking');
   
   const [dataChat, SetDataChat] = useState(initialData.dataChat);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   // Updated save function to include user info and session
   const saveChatData = useCallback(() => {
@@ -263,7 +262,7 @@ function ChatBot() {
   };
 
   const clearChatHistory = () => {
-    SetDataChat([["start", ["Xin chào! Đây là HUMG Chatbot, trợ lý đắc lực dành cho bạn! Bạn muốn tìm kiếm thông tin về những gì? Đừng quên chọn nguồn tham khảo phù hợp để mình có thể giúp bạn tìm kiếm thông tin chính xác nhất nha. 😄", null]]]);
+    SetDataChat([["start", ["Xin chào! Đây là HUMG Chatbot, trợ lý đắc lực dành cho bạn! Bạn muốn tìm kiếm thông tin về những gì? Đừng quên chọn nguồn tham khảo phù hợp để mình có thể giúp bạn tìm kiếm thông tin chính xác nha. 😄", null]]]);
     SetChatHistory([]);
     setFeedbackState({});
     const newSessionId = generateSessionId();
@@ -471,11 +470,6 @@ function ChatBot() {
     }
   }
 
-  const handleReferenceClick = (source, sourceType) => {
-    console.log('🔗 Click vào nguồn tham khảo:', source, sourceType);
-    // Có thể mở link trong tab mới hoặc hiển thị thông tin chi tiết
-  };
-
   const handleCopyMessage = (messageIndex, messageText) => {
     navigator.clipboard.writeText(messageText).then(() => {
       console.log('📋 Đã sao chép tin nhắn');
@@ -582,36 +576,6 @@ function ChatBot() {
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-blue-600 hover:underline">$1</a>');
   };
 
-  const parseMarkdownToJSX = (text) => {
-    if (!text) return null;
-    
-    const parts = text.split(/(\*\*.*?\*\*|\*.*?\*|`.*?`|\[.*?\]\(.*?\))/g);
-    
-    return parts.map((part, index) => {
-      if (part.match(/^\*\*.*\*\*$/)) {
-        return <strong key={index}>{part.slice(2, -2)}</strong>;
-      } else if (part.match(/^\*.*\*$/)) {
-        return <em key={index}>{part.slice(1, -1)}</em>;
-      } else if (part.match(/^`.*`$/)) {
-        return <code key={index} className="bg-gray-100 px-1 py-0.5 rounded text-sm">{part.slice(1, -1)}</code>;
-      } else if (part.match(/^\[.*?\]\(.*?\)$/)) {
-        const match = part.match(/^\[(.*?)\]\((.*?)\)$/);
-        return (
-          <a key={index} href={match[2]} target="_blank" className="text-blue-600 hover:underline">
-            {match[1]}
-          </a>
-        );
-      } else {
-        return part.split('\n').map((line, lineIndex) => (
-          <span key={`${index}-${lineIndex}`}>
-            {lineIndex > 0 && <br />}
-            {line}
-          </span>
-        ));
-      }
-    });
-  };
-
   const CustomTypingAnimation = ({ text, onComplete, speed = 50 }) => {
     const [displayedText, setDisplayedText] = useState('');
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -634,118 +598,69 @@ function ChatBot() {
     );
   };
 
-  // Toggle dark mode
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
-  };
-
   return (
     <div className={`flex h-full ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-[260px]' : 'w-16'} ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-r flex flex-col transition-all duration-300`}>
-        {/* Sidebar Header */}
-        <div className={`p-4`}>
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className={`p-2 hover:${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            {sidebarOpen && (
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={toggleDarkMode}
-                  className={`p-2 hover:${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
-                  title={isDarkMode ? 'Chuyển sang Light mode' : 'Chuyển sang Dark mode'}
-                >
-                  <FontAwesomeIcon icon={isDarkMode ? faSun : faMoon} className="text-sm" />
-                </button>
-                <button className={`p-2 hover:${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'} rounded-lg transition-colors ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  <FontAwesomeIcon icon={faSearch} className="text-sm" />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Sidebar Content */}
-        {sidebarOpen && (
-          <div className="flex-1 overflow-y-auto scrollbar-hide ">
-            {/* New Chat Button */}
-            <div className="p-4">
-              <button
-                onClick={handleNewSession}
-                className="w-full flex items-center justify-center space-x-3 p-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 border-0 font-medium text-sm"
-              >
-                <div className="w-6 h-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                  <FontAwesomeIcon icon={faPlus} className="text-xs" />
-                </div>
-                <span>Cuộc trò chuyện mới</span>
-              </button>
-            </div>
-
-            {/* Recent Chats */}
-            <div className="px-4">
-              <h3 className={`text-sm font-medium mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Gần đây</h3>
-              <div className="space-y-2">
-                {conversationHistory.length === 0 ? (
-                  <div className={`text-center py-4 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                    <div className="w-8 h-8 mx-auto mb-2 opacity-50">
-                      <FontAwesomeIcon icon={faMessage} className="w-full h-full" />
-                    </div>
-                    <p className="text-xs">Chưa có cuộc trò chuyện nào</p>
-                  </div>
-                ) : (
-                  conversationHistory.map((conv, index) => (
-                    <button
-                      key={index}
-                      onClick={() => loadConversation(conv.session_id)}
-                      className={`w-full text-left p-3 rounded-lg transition-all duration-200 ${
-                        selectedSession === conv.session_id 
-                          ? (isDarkMode ? 'bg-blue-600 text-white shadow-lg' : 'bg-blue-50 text-blue-700')
-                          : (isDarkMode ? 'text-gray-300 hover:bg-gray-700 hover:shadow-md' : 'text-gray-700 hover:bg-gray-50 hover:shadow-sm')
-                      }`}
-                      title={conv.title || `Cuộc trò chuyện ${index + 1}`}
-                      style={{border: 'none'}}
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium truncate">{conv.title || `Cuộc trò chuyện ${index + 1}`}</div>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Sidebar Footer */}
-        <div className={`p-4`}>
-          {sidebarOpen && (
-            <button className={`w-full p-3 flex items-center space-x-3 rounded-lg transition-colors ${
-              isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'
-            }`}>
-              <FontAwesomeIcon icon={faCog} className="text-sm" />
-              <span className="text-sm">Cài đặt</span>
-            </button>
-          )}
-        </div>
+      <div className="hidden md:flex h-full">
+        <SidebarMenu
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          handleNewSession={handleNewSession}
+          conversationHistory={conversationHistory}
+          selectedSession={selectedSession}
+          loadConversation={loadConversation}
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
+        />
       </div>
+      {/* Sidebar overlay cho mobile */}
+      {showMobileSidebar && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="absolute inset-0 bg-black bg-opacity-40" onClick={() => setShowMobileSidebar(false)}></div>
+          <div className="relative w-64 h-full">
+            <SidebarMenu
+              sidebarOpen={true}
+              setSidebarOpen={() => setShowMobileSidebar(false)}
+              handleNewSession={handleNewSession}
+              conversationHistory={conversationHistory}
+              selectedSession={selectedSession}
+              loadConversation={loadConversation}
+              isDarkMode={isDarkMode}
+              setIsDarkMode={setIsDarkMode}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main Chat Area */}
       <div className={`flex-1 flex flex-col ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
         {/* Chat Header - No border */}
-        <div className={`px-6 py-4 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} border-b`}>
-          <div className="flex items-center justify-between">
-            <h1 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>HUMG Chatbot</h1>
+        <div className={`px-4 md:px-6 py-2 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} border-b flex items-center justify-between`}> 
+          {/* Hiển thị trên md trở lên */}
+          <div className="hidden md:flex w-full items-center justify-between">
+            <h1 className={`text-[16px] font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>HUMG Chatbot</h1>
             <div className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-medium">
                 {userInfo?.userName?.charAt(0) || 'U'}
               </div>
             </div>
+          </div>
+          {/* Hiển thị dưới md: 2 nút toggle sidebar và tạo chat mới */}
+          <div className="flex md:hidden w-full items-center justify-between">
+            <button
+              onClick={() => setShowMobileSidebar(true)}
+              className="w-9 h-9 rounded-md bg-gray-100 text-gray-600 mr-2"
+              title="Mở menu"
+            >
+              <FontAwesomeIcon icon={faBars} className="text-lg" />
+            </button>
+            <button
+              onClick={handleNewSession}
+              className="w-9 h-9 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 shadow-md focus:outline-none"
+              title="Tạo đoạn chat mới"
+            >
+              <FontAwesomeIcon icon={faPenToSquare} className="text-lg" />
+            </button>
           </div>
         </div>
 
@@ -942,7 +857,7 @@ function ChatBot() {
         )}
 
         {/* Input Section - Floating style */}
-        <div className="p-6">
+        <div className="px-4 pb-4">
           <div className="max-w-4xl mx-auto">
             {/* Source Selection - Subtle */}
             {/* <div className="mb-3 flex items-center space-x-2">
@@ -992,12 +907,7 @@ function ChatBot() {
                     <FontAwesomeIcon icon={faPlus} className="text-sm" />
                     <span className="text-xs">Thêm</span>
                   </button>
-                  <button className={`flex items-center space-x-2 transition-colors ${
-                    isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
-                  }`}>
-                    <FontAwesomeIcon icon={faMagnifyingGlass} className="text-sm" />
-                    <span className="text-xs">Tìm kiếm</span>
-                  </button>
+                
                   <button className={`flex items-center space-x-2 transition-colors ${
                     isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-400 hover:text-gray-600'
                   }`}>
